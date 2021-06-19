@@ -2,6 +2,7 @@ plugins {
 	id "org.jetbrains.kotlin.jvm" version "1.5.10"
 	id "java-library"
 	id "com.github.ben-manes.versions" version "0.39.0"
+	id "maven-publish"
 }
 
 group = "dev.capybaralabs.d4j.store.postgres"
@@ -54,5 +55,13 @@ tasks.named("dependencyUpdates").configure {
 	checkConstraints = true
 	rejectVersionIf {
 		isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
+	}
+}
+
+publishing {
+	publications {
+		create("main", MavenPublication) {
+			from(components.kotlin)
+		}
 	}
 }
