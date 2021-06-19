@@ -1,0 +1,55 @@
+plugins {
+	id "org.jetbrains.kotlin.jvm" version "1.5.10"
+	id "java-library"
+	id "com.github.ben-manes.versions" version "0.39.0"
+}
+
+repositories {
+	mavenCentral()
+	maven { url "https://oss.sonatype.org/content/repositories/snapshots" } // D4J snapshots
+	maven { url "https://repo.spring.io/milestone" }                        // D4J snapshots
+}
+
+
+dependencies {
+	implementation platform("org.jetbrains.kotlin:kotlin-bom")
+	implementation platform("org.springframework.boot:spring-boot-dependencies:2.5.1")
+	testImplementation platform("org.testcontainers:testcontainers-bom:1.15.3")
+
+	api "com.discord4j:discord4j-core:3.2.0-SNAPSHOT"
+	api "io.r2dbc:r2dbc-postgresql:0.8.8.RELEASE"
+	api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
+	api "org.slf4j:slf4j-api"
+
+	implementation "org.jetbrains.kotlin:kotlin-reflect"
+	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+	implementation "io.projectreactor.kotlin:reactor-kotlin-extensions"
+
+	testImplementation "org.jetbrains.kotlin:kotlin-test"
+	testImplementation "org.jetbrains.kotlin:kotlin-test-junit5"
+	testImplementation "org.junit.jupiter:junit-jupiter-api"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+	testImplementation "org.assertj:assertj-core"
+	testImplementation "org.testcontainers:postgresql"
+	testImplementation "org.testcontainers:r2dbc"
+	testImplementation "ch.qos.logback:logback-classic"
+}
+
+test {
+	useJUnitPlatform()
+}
+
+def isNonStable = { String version ->
+	def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+	def regex = /^[0-9,.v-]+(-r)?$/
+	return !stableKeyword && !(version ==~ regex)
+}
+
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
+	checkConstraints = true
+	rejectVersionIf {
+		isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
+	}
+}
