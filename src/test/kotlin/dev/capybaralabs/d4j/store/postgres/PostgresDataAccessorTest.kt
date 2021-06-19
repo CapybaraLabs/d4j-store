@@ -1,4 +1,4 @@
-package space.npstr.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.EmojiData
@@ -17,12 +17,12 @@ import discord4j.discordjson.possible.Possible
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 private val LONGS = AtomicLong(ThreadLocalRandom.current().nextLong(Long.MAX_VALUE / 2, Long.MAX_VALUE))
 fun generateUniqueSnowflakeId(): Long {

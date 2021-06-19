@@ -1,4 +1,4 @@
-package space.npstr.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres
 
 class Repositories internal constructor(
 	internal val channels: ChannelRepository,

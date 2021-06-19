@@ -1,4 +1,4 @@
-package space.npstr.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.UserData
 import io.r2dbc.spi.ConnectionFactory

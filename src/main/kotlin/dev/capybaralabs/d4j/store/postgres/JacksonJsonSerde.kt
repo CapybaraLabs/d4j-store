@@ -1,4 +1,4 @@
-package space.npstr.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper

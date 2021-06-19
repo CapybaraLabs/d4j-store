@@ -4,7 +4,7 @@ plugins {
 	id "com.github.ben-manes.versions" version "0.39.0"
 }
 
-group = "space.npstr.d4j.store.postgres"
+group = "dev.capybaralabs.d4j.store.postgres"
 version = "0.0.1-SNAPSHOT"
 
 repositories {

@@ -1,4 +1,4 @@
-package space.npstr.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.common.store.api.layout.DataAccessor
 import discord4j.discordjson.json.ChannelData
