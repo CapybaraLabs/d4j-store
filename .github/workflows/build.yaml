@@ -35,4 +35,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          arguments: sonarqube -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
+          arguments: test sonarqube -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
