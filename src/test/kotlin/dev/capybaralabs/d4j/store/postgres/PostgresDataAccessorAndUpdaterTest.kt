@@ -30,7 +30,7 @@ fun generateUniqueSnowflakeId(): Long {
 	return LONGS.decrementAndGet()
 }
 
-internal class PostgresDataAccessorTest {
+internal class PostgresDataAccessorAndUpdaterTest {
 	private val storeLayout = PostgresStoreLayout(
 		ConnectionPool(ConnectionPoolConfiguration
 			.builder(ConnectionFactories.get("r2dbc:tc:postgresql:///test?TC_IMAGE_TAG=13"))
@@ -38,8 +38,8 @@ internal class PostgresDataAccessorTest {
 		)
 	)
 
-	private val dataAccessor = storeLayout.dataAccessor
-	private val dataUpdater = storeLayout.gatewayDataUpdater
+	private val accessor = storeLayout.dataAccessor
+	private val updater = storeLayout.gatewayDataUpdater
 
 	// TODO write tests for total counts
 
@@ -51,15 +51,15 @@ internal class PostgresDataAccessorTest {
 			.channel(channel(channelId)
 				.name("Emergency Medical Holographic Channel")
 				.build())
-		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+		updater.onChannelCreate(0, channelCreate.build()).block()
 
-		val channel = dataAccessor.getChannelById(channelId).block()!!
+		val channel = accessor.getChannelById(channelId).block()!!
 		assertThat(channel.id().asLong()).isEqualTo(channelId)
 		assertThat(channel.name().isAbsent).isFalse
 		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
 		assertThat(channel.guildId().isAbsent).isTrue
 
-		assertThat(dataAccessor.channels.collectList().block()!!)
+		assertThat(accessor.channels.collectList().block()!!)
 			.anyMatch { it.id().asLong() == channelId }
 	}
 
@@ -70,22 +70,22 @@ internal class PostgresDataAccessorTest {
 		val guildCreate = GuildCreate.builder()
 			.guild(ds9Guild(guildId).build())
 			.build()
-		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).blockOptional()
 
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
-		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+		updater.onChannelCreate(0, channelCreate.build()).block()
 
 
-		val channel = dataAccessor.getChannelById(channelId).block()!!
+		val channel = accessor.getChannelById(channelId).block()!!
 		assertThat(channel.id().asLong()).isEqualTo(channelId)
 		assertThat(channel.guildId().isAbsent).isFalse
 		assertThat(channel.guildId().get().asLong()).isEqualTo(guildId)
 
-		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+		assertThat(accessor.getGuildById(guildId).block()!!.channels())
 			.contains(Id.of(channelId))
-		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!)
+		assertThat(accessor.countChannelsInGuild(guildId).block()!!)
 			.isEqualTo(1)
-		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
 			.anyMatch { it.id().asLong() == channelId }
 	}
 
@@ -96,26 +96,26 @@ internal class PostgresDataAccessorTest {
 		val guildCreate = GuildCreate.builder()
 			.guild(ds9Guild(guildId).build())
 			.build()
-		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).blockOptional()
 
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
-		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+		updater.onChannelCreate(0, channelCreate.build()).block()
 
 
-		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+		assertThat(accessor.getGuildById(guildId).block()!!.channels())
 			.contains(Id.of(channelId))
-		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!)
+		assertThat(accessor.countChannelsInGuild(guildId).block()!!)
 			.isEqualTo(1)
-		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
 			.anyMatch { it.id().asLong() == channelId }
 
 		val channelDelete = ChannelDelete.builder().channel(channel(channelId).guildId(guildId).build())
-		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
+		updater.onChannelDelete(0, channelDelete.build()).block()
 
-		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+		assertThat(accessor.getGuildById(guildId).block()!!.channels())
 			.doesNotContain(Id.of(channelId))
-		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!).isEqualTo(0)
-		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.countChannelsInGuild(guildId).block()!!).isEqualTo(0)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
 			.noneMatch { it.id().asLong() == channelId }
 	}
 
@@ -125,27 +125,27 @@ internal class PostgresDataAccessorTest {
 
 		// Create channel
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).build())
-		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+		updater.onChannelCreate(0, channelCreate.build()).block()
 
 		// Send message
 		val messageId = generateUniqueSnowflakeId()
 		val messageCreate = MessageCreate.builder()
 			.message(message(channelId, messageId, generateUniqueSnowflakeId()).build())
 			.build()
-		dataUpdater.onMessageCreate(0, messageCreate).block()
-		assertThat(dataAccessor.getMessagesInChannel(channelId).collectList().block()!!)
+		updater.onMessageCreate(0, messageCreate).block()
+		assertThat(accessor.getMessagesInChannel(channelId).collectList().block()!!)
 			.anyMatch { it.id().asLong() == messageId }
-		assertThat(dataAccessor.countMessagesInChannel(channelId).block()!!).isEqualTo(1)
+		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(1)
 
 
 		// Delete
 		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
-		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
+		updater.onChannelDelete(0, channelDelete.build()).block()
 
-		assertThat(dataAccessor.getChannelById(channelId).block()).isNull()
+		assertThat(accessor.getChannelById(channelId).block()).isNull()
 
-		assertThat(dataAccessor.getMessagesInChannel(channelId).collectList().block()!!).isEmpty()
-		assertThat(dataAccessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
+		assertThat(accessor.getMessagesInChannel(channelId).collectList().block()!!).isEmpty()
+		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
 	}
 
 	// TODO fun onGuildDelete_deleteMessageInChannels()
@@ -157,10 +157,10 @@ internal class PostgresDataAccessorTest {
 			.guild(ds9Guild(guildId).build())
 			.build()
 
-		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).blockOptional()
 
 
-		val guild = dataAccessor.getGuildById(guildId).block()!!
+		val guild = accessor.getGuildById(guildId).block()!!
 
 		assertThat(guild.id().asLong()).isEqualTo(guildId)
 		assertThat(guild.name()).isEqualTo("Deep Space 9")
@@ -183,23 +183,23 @@ internal class PostgresDataAccessorTest {
 			)
 			.build()
 
-		dataUpdater.onGuildCreate(0, guildCreate).block()
+		updater.onGuildCreate(0, guildCreate).block()
 
 
-		val guild = dataAccessor.getGuildById(guildId).block()!!
+		val guild = accessor.getGuildById(guildId).block()!!
 		assertThat(guild.channels()).hasSize(2)
 
-		val channelA = dataAccessor.getChannelById(channelIdA).block()!!
+		val channelA = accessor.getChannelById(channelIdA).block()!!
 		assertThat(channelA.id().asLong()).isEqualTo(channelIdA)
 		assertThat(channelA.guildId().get().asLong()).isEqualTo(guildId)
 
-		val channelB = dataAccessor.getChannelById(channelIdB).block()!!
+		val channelB = accessor.getChannelById(channelIdB).block()!!
 		assertThat(channelB.id().asLong()).isEqualTo(channelIdB)
 		assertThat(channelB.guildId().get().asLong()).isEqualTo(guildId)
 
-		val count = dataAccessor.countChannelsInGuild(guildId).block()!!
+		val count = accessor.countChannelsInGuild(guildId).block()!!
 		assertThat(count).isEqualTo(2)
-		val channelsInGuild = dataAccessor.getChannelsInGuild(guildId).collectList().block()!!
+		val channelsInGuild = accessor.getChannelsInGuild(guildId).collectList().block()!!
 		assertThat(channelsInGuild)
 			.hasSize(2)
 			.anySatisfy { assertThat(it.id().asLong()).isEqualTo(channelIdA) }
@@ -222,19 +222,19 @@ internal class PostgresDataAccessorTest {
 			)
 			.build()
 
-		dataUpdater.onGuildCreate(0, guildCreate).block()
+		updater.onGuildCreate(0, guildCreate).block()
 
 
-		val count = dataAccessor.countEmojisInGuild(guildId).block()!!
+		val count = accessor.countEmojisInGuild(guildId).block()!!
 		assertThat(count).isEqualTo(2)
 
-		val guild = dataAccessor.getGuildById(guildId).block()!!
+		val guild = accessor.getGuildById(guildId).block()!!
 		assertThat(guild.emojis()).hasSize(2)
 
-		val emojiA = dataAccessor.getEmojiById(guildId, emojiIdA).block()!!
+		val emojiA = accessor.getEmojiById(guildId, emojiIdA).block()!!
 		assertThat(emojiA.id().get().asLong()).isEqualTo(emojiIdA)
 
-		val emojiB = dataAccessor.getEmojiById(guildId, emojiIdB).block()!!
+		val emojiB = accessor.getEmojiById(guildId, emojiIdB).block()!!
 		assertThat(emojiB.id().get().asLong()).isEqualTo(emojiIdB)
 	}
 
@@ -248,24 +248,24 @@ internal class PostgresDataAccessorTest {
 			.message(message(channelId, messageId, authorId).build())
 			.build()
 
-		dataUpdater.onChannelCreate(
+		updater.onChannelCreate(
 			0, ChannelCreate.builder()
 			.channel(channel(channelId).build())
 			.build()
 		).block()
 
-		dataUpdater.onMessageCreate(0, messageCreate).block()
+		updater.onMessageCreate(0, messageCreate).block()
 
-		val message = dataAccessor.getMessageById(channelId, messageId).block()!!
+		val message = accessor.getMessageById(channelId, messageId).block()!!
 		assertThat(message.id().asLong()).isEqualTo(messageId)
 		assertThat(message.channelId().asLong()).isEqualTo(channelId)
 		assertThat(message.author().id().asLong()).isEqualTo(authorId)
 		assertThat(message.content()).isEqualTo("🖖")
 
-		val count = dataAccessor.countMessagesInChannel(channelId).block()!!
+		val count = accessor.countMessagesInChannel(channelId).block()!!
 		assertThat(count).isEqualTo(1)
 
-		val channel = dataAccessor.getChannelById(channelId).block()!!
+		val channel = accessor.getChannelById(channelId).block()!!
 		assertThat(channel.lastMessageId().get().get().asLong()).isEqualTo(messageId)
 	}
 
