@@ -83,6 +83,16 @@ internal class MessageRepository(private val factory: ConnectionFactory, private
 		}
 	}
 
+	fun deleteByChannelId(channelId: Long): Mono<Int> {
+		return Mono.defer {
+			withConnection(factory) {
+				it.createStatement("DELETE FROM d4j_discord_message WHERE channel_id = $1")
+					.bind("$1", channelId)
+					.executeConsumingSingle()
+			}
+		}
+	}
+
 	fun countMessages(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {

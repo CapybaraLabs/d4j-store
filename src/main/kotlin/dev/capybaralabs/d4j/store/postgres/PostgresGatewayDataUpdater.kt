@@ -108,10 +108,14 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			false -> Mono.empty()
 		}
 
+		val deleteMessagesInChannel = repos.messages.deleteByChannelId(channelId)
+
 		val deleteChannelReturningOld = repos.channels.getChannelById(channelId)
 			.flatMap { oldChannel -> repos.channels.delete(channelId).thenReturn(oldChannel) }
 
-		return removeChannelFromGuild.then(deleteChannelReturningOld)
+		return removeChannelFromGuild
+			.and(deleteMessagesInChannel)
+			.then(deleteChannelReturningOld)
 	}
 
 	override fun onChannelUpdate(shardIndex: Int, dispatch: ChannelUpdate): Mono<ChannelData> {
