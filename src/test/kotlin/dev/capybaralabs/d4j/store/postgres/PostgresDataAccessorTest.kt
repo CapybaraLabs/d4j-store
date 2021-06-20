@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres
 
+import discord4j.discordjson.Id
 import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.EmojiData
 import discord4j.discordjson.json.GuildCreateData
@@ -40,6 +41,53 @@ internal class PostgresDataAccessorTest {
 	private val dataUpdater = storeLayout.gatewayDataUpdater
 
 	// TODO write tests for total counts
+
+	@Test
+	fun onChannelCreate_withoutGuild() {
+		val channelId = generateUniqueSnowflakeId()
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(ds9Guild(guildId).build())
+			.build()
+		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+
+		val channelCreate = ChannelCreate.builder()
+			.channel(channel(channelId)
+				.name("Emergency Medical Holographic Channel")
+				.guildId(guildId)
+				.build())
+		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+
+
+		val guild = dataAccessor.getGuildById(guildId).block()!!
+		assertThat(guild.channels()).contains(Id.of(channelId))
+
+		val channel = dataAccessor.getChannelById(channelId).block()!!
+		assertThat(channel.id().asLong()).isEqualTo(channelId)
+		assertThat(channel.name().isAbsent).isFalse
+		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
+		assertThat(channel.guildId().isAbsent).isFalse
+		assertThat(channel.guildId().get().asLong()).isEqualTo(guildId)
+	}
+
+	@Test
+	fun onChannelCreate_withGuild() {
+		val channelId = generateUniqueSnowflakeId()
+
+		val channelCreate = ChannelCreate.builder()
+			.channel(channel(channelId)
+				.name("Emergency Medical Holographic Channel")
+				.build())
+		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+
+
+		val channel = dataAccessor.getChannelById(channelId).block()!!
+		assertThat(channel.id().asLong()).isEqualTo(channelId)
+		assertThat(channel.name().isAbsent).isFalse
+		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
+		assertThat(channel.guildId().isAbsent).isTrue
+	}
+
 
 	@Test
 	fun onGuildCreate() {
