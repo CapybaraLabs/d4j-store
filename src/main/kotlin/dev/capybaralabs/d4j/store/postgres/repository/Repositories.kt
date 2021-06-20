@@ -1,6 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.postgres.repository
 
-class Repositories internal constructor(
+internal class Repositories internal constructor(
 	internal val channels: ChannelRepository,
 	internal val emojis: EmojiRepository,
 	internal val guilds: GuildRepository,

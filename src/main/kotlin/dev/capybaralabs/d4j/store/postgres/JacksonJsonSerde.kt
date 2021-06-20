@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
  * TODO define proper exceptions
  */
 // TODO object mapper needs to write out IDs/Longs as strings, probably
-class JacksonJsonSerde(private val mapper: ObjectMapper) : PostgresSerde {
+internal class JacksonJsonSerde(private val mapper: ObjectMapper) : PostgresSerde {
 
     override fun <I> serialize(value: I): ByteArray {
         try {

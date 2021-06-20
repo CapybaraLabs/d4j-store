@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres
 
+import dev.capybaralabs.d4j.store.postgres.repository.Repositories
 import discord4j.common.store.api.`object`.InvalidationCause
 import discord4j.common.store.api.`object`.PresenceAndUserData
 import discord4j.common.store.api.layout.GatewayDataUpdater
@@ -62,7 +63,7 @@ import reactor.core.publisher.Mono
  *
  * Some copying going on from [discord4j.common.store.legacy.LegacyStoreLayout]
  */
-class PostgresGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpdater {
+internal class PostgresGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpdater {
 
 	companion object {
 		private val log = LoggerFactory.getLogger(PostgresGatewayDataUpdater::class.java)

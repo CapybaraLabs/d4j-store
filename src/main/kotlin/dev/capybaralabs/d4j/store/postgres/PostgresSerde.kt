@@ -2,7 +2,7 @@ package dev.capybaralabs.d4j.store.postgres
 
 import java.nio.charset.StandardCharsets
 
-interface PostgresSerde {
+internal interface PostgresSerde {
 
     fun <I> serialize(value: I): ByteArray
 

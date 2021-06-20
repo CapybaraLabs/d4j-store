@@ -15,6 +15,16 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
+import dev.capybaralabs.d4j.store.postgres.repository.ChannelRepository
+import dev.capybaralabs.d4j.store.postgres.repository.EmojiRepository
+import dev.capybaralabs.d4j.store.postgres.repository.GuildRepository
+import dev.capybaralabs.d4j.store.postgres.repository.MemberRepository
+import dev.capybaralabs.d4j.store.postgres.repository.MessageRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PresenceRepository
+import dev.capybaralabs.d4j.store.postgres.repository.Repositories
+import dev.capybaralabs.d4j.store.postgres.repository.RoleRepository
+import dev.capybaralabs.d4j.store.postgres.repository.UserRepository
+import dev.capybaralabs.d4j.store.postgres.repository.VoiceStateRepository
 import discord4j.common.store.api.layout.DataAccessor
 import discord4j.common.store.api.layout.GatewayDataUpdater
 import discord4j.common.store.api.layout.StoreLayout
