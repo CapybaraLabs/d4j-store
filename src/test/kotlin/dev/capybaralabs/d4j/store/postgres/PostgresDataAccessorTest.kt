@@ -44,73 +44,9 @@ internal class PostgresDataAccessorTest {
 	// TODO write tests for total counts
 
 	@Test
-	fun onChannelCreate_onChannelDelete_withoutGuild() {
-		val channelId = generateUniqueSnowflakeId()
-		val guildId = generateUniqueSnowflakeId()
-		val guildCreate = GuildCreate.builder()
-			.guild(ds9Guild(guildId).build())
-			.build()
-		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
-
-		// Create
-		val channelCreate = ChannelCreate.builder()
-			.channel(channel(channelId)
-				.name("Emergency Medical Holographic Channel")
-				.guildId(guildId)
-				.build())
-		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
-
-		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
-			.contains(Id.of(channelId))
-
-		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!)
-			.isEqualTo(1)
-		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
-			.anyMatch { it.id().asLong() == channelId }
-
-		val channel = dataAccessor.getChannelById(channelId).block()!!
-		assertThat(channel.id().asLong()).isEqualTo(channelId)
-		assertThat(channel.name().isAbsent).isFalse
-		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
-		assertThat(channel.guildId().isAbsent).isFalse
-		assertThat(channel.guildId().get().asLong()).isEqualTo(guildId)
-		assertThat(dataAccessor.channels.collectList().block()!!)
-			.anyMatch { it.id().asLong() == channelId }
-
-
-		// Send message
-		val messageId = generateUniqueSnowflakeId()
-		val messageCreate = MessageCreate.builder()
-			.message(message(channelId, messageId, generateUniqueSnowflakeId()).build())
-			.build()
-		dataUpdater.onMessageCreate(0, messageCreate).block()
-		assertThat(dataAccessor.getMessagesInChannel(channelId).collectList().block()!!)
-			.anyMatch { it.id().asLong() == messageId }
-		assertThat(dataAccessor.countMessagesInChannel(channelId).block()!!).isEqualTo(1)
-
-
-		// Delete
-		val channelDelete = ChannelDelete.builder().channel(channel(channelId).guildId(guildId).build())
-		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
-
-		val guildAfterDelete = dataAccessor.getGuildById(guildId).block()!!
-		assertThat(guildAfterDelete.channels()).doesNotContain(Id.of(channelId))
-
-		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!).isEqualTo(0)
-		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
-			.noneMatch { it.id().asLong() == channelId }
-
-		assertThat(dataAccessor.getChannelById(channelId).block()).isNull()
-
-		assertThat(dataAccessor.getMessagesInChannel(channelId).collectList().block()!!).isEmpty()
-		assertThat(dataAccessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
-	}
-
-	@Test
-	fun onChannelCreate_withGuild() {
+	fun onChannelCreate_createChannel() {
 		val channelId = generateUniqueSnowflakeId()
 
-		// Create
 		val channelCreate = ChannelCreate.builder()
 			.channel(channel(channelId)
 				.name("Emergency Medical Holographic Channel")
@@ -123,6 +59,73 @@ internal class PostgresDataAccessorTest {
 		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
 		assertThat(channel.guildId().isAbsent).isTrue
 
+		assertThat(dataAccessor.channels.collectList().block()!!)
+			.anyMatch { it.id().asLong() == channelId }
+	}
+
+	@Test
+	fun givenChannelInGuild_onChannelCreate_addChannelToGuild() {
+		val channelId = generateUniqueSnowflakeId()
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(ds9Guild(guildId).build())
+			.build()
+		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
+		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+
+
+		val channel = dataAccessor.getChannelById(channelId).block()!!
+		assertThat(channel.id().asLong()).isEqualTo(channelId)
+		assertThat(channel.guildId().isAbsent).isFalse
+		assertThat(channel.guildId().get().asLong()).isEqualTo(guildId)
+
+		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+			.contains(Id.of(channelId))
+		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!)
+			.isEqualTo(1)
+		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+			.anyMatch { it.id().asLong() == channelId }
+	}
+
+	@Test
+	fun givenChannelInGuild_onChannelDelete_removeChannelFromGuild() {
+		val channelId = generateUniqueSnowflakeId()
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(ds9Guild(guildId).build())
+			.build()
+		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
+
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
+		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
+
+
+		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+			.contains(Id.of(channelId))
+		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!)
+			.isEqualTo(1)
+		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+			.anyMatch { it.id().asLong() == channelId }
+
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).guildId(guildId).build())
+		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
+
+		assertThat(dataAccessor.getGuildById(guildId).block()!!.channels())
+			.doesNotContain(Id.of(channelId))
+		assertThat(dataAccessor.countChannelsInGuild(guildId).block()!!).isEqualTo(0)
+		assertThat(dataAccessor.getChannelsInGuild(guildId).collectList().block()!!)
+			.noneMatch { it.id().asLong() == channelId }
+	}
+
+	@Test
+	fun onChannelDelete_deleteMessagesInChannel() {
+		val channelId = generateUniqueSnowflakeId()
+
+		// Create channel
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).build())
+		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
 
 		// Send message
 		val messageId = generateUniqueSnowflakeId()
@@ -145,6 +148,7 @@ internal class PostgresDataAccessorTest {
 		assertThat(dataAccessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
 	}
 
+	// TODO fun onGuildDelete_deleteMessageInChannels()
 
 	@Test
 	fun onGuildCreate() {
