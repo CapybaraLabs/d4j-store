@@ -1,7 +1,5 @@
 # D4J Postgres Store [![Release](https://jitpack.io/v/dev.capybaralabs/d4j-postgres-store.svg)](https://jitpack.io/#dev.capybaralabs/d4j-postgres-store)
 
-[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-black.svg)](https://sonarcloud.io/dashboard?id=CapybaraLabs_d4j-postgres-store)
-
 An implementation of
 the [Discord4J Store](https://github.com/Discord4J/Discord4J/tree/master/common/src/main/java/discord4j/common/store/api/layout)
 (Discord entity cache)
@@ -64,3 +62,5 @@ fun gatewayBootstrap(discordClient: DiscordClient): GatewayBootstrap<GatewayOpti
         }
 }
 ```
+
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-black.svg)](https://sonarcloud.io/dashboard?id=dev.capybaralabs.d4j.store.postgres%3Ad4j-postgres-store)
