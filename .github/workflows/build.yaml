@@ -1,0 +1,38 @@
+name: Build
+
+on: push
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # v2.3.4
+        with:
+          fetch-depth: 0
+
+      - name: Gradle Wrapper Verification
+        uses: gradle/wrapper-validation-action@e2c57acffb2c9aa5a8dc6eda2bbae0b6e495bd4c # v1.0.3
+
+      - name: Setup JDK
+        uses: actions/setup-java@d202f5dbf7256730fb690ec59f6381650114feb2 # v1.4.3
+        with:
+          java-version: 11
+
+      - name: Print JDK info
+        run: java -Xmx32m --version
+
+      - name: Gradle Assemble
+        uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf # v1.10
+        with:
+          arguments: assemble --info
+
+      - name: Sonarcloud
+        uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf # v1.10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          arguments: sonarqube -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
