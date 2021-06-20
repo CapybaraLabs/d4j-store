@@ -17,7 +17,6 @@ import discord4j.discordjson.possible.Possible
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
-import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
@@ -31,10 +30,8 @@ fun generateUniqueSnowflakeId(): Long {
 
 internal class PostgresDataAccessorTest {
 	private val storeLayout = PostgresStoreLayout(
-		ConnectionPool(ConnectionPoolConfiguration.builder(ConnectionFactories.get("r2dbc:tc:postgresql:///test?TC_IMAGE_TAG=13"))
-			.maxSize(20)
-			.maxIdleTime(Duration.ofMillis(1000))
-			.maxAcquireTime(Duration.ofMillis(5000))
+		ConnectionPool(ConnectionPoolConfiguration
+			.builder(ConnectionFactories.get("r2dbc:tc:postgresql:///test?TC_IMAGE_TAG=13"))
 			.build()
 		)
 	)
