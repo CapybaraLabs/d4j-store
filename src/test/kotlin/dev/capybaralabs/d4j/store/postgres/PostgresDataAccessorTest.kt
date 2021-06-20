@@ -12,6 +12,7 @@ import discord4j.discordjson.json.ImmutableUserData
 import discord4j.discordjson.json.MessageData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.gateway.ChannelCreate
+import discord4j.discordjson.json.gateway.ChannelDelete
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.possible.Possible
@@ -43,7 +44,7 @@ internal class PostgresDataAccessorTest {
 	// TODO write tests for total counts
 
 	@Test
-	fun onChannelCreate_withoutGuild() {
+	fun onChannelCreate_onChannelDelete_withoutGuild() {
 		val channelId = generateUniqueSnowflakeId()
 		val guildId = generateUniqueSnowflakeId()
 		val guildCreate = GuildCreate.builder()
@@ -51,6 +52,7 @@ internal class PostgresDataAccessorTest {
 			.build()
 		dataUpdater.onGuildCreate(0, guildCreate).blockOptional()
 
+		// Create
 		val channelCreate = ChannelCreate.builder()
 			.channel(channel(channelId)
 				.name("Emergency Medical Holographic Channel")
@@ -58,9 +60,11 @@ internal class PostgresDataAccessorTest {
 				.build())
 		dataUpdater.onChannelCreate(0, channelCreate.build()).block()
 
-
 		val guild = dataAccessor.getGuildById(guildId).block()!!
 		assertThat(guild.channels()).contains(Id.of(channelId))
+
+		val channelsInGuild = dataAccessor.getChannelsInGuild(guildId).collectList().block()!!
+		assertThat(channelsInGuild).anyMatch { it.id().asLong() == channelId }
 
 		val channel = dataAccessor.getChannelById(channelId).block()!!
 		assertThat(channel.id().asLong()).isEqualTo(channelId)
@@ -68,12 +72,26 @@ internal class PostgresDataAccessorTest {
 		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
 		assertThat(channel.guildId().isAbsent).isFalse
 		assertThat(channel.guildId().get().asLong()).isEqualTo(guildId)
+
+		// Delete
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).guildId(guildId).build())
+		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
+
+		val guildAfterDelete = dataAccessor.getGuildById(guildId).block()!!
+		assertThat(guildAfterDelete.channels()).doesNotContain(Id.of(channelId))
+
+		val channelsInGuildAfterDelete = dataAccessor.getChannelsInGuild(guildId).collectList().block()!!
+		assertThat(channelsInGuildAfterDelete).noneMatch { it.id().asLong() == channelId }
+
+		val channelAfterDelete = dataAccessor.getChannelById(channelId).block()
+		assertThat(channelAfterDelete).isNull()
 	}
 
 	@Test
 	fun onChannelCreate_withGuild() {
 		val channelId = generateUniqueSnowflakeId()
 
+		// Create
 		val channelCreate = ChannelCreate.builder()
 			.channel(channel(channelId)
 				.name("Emergency Medical Holographic Channel")
@@ -86,6 +104,13 @@ internal class PostgresDataAccessorTest {
 		assertThat(channel.name().isAbsent).isFalse
 		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
 		assertThat(channel.guildId().isAbsent).isTrue
+
+		// Delete
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
+		dataUpdater.onChannelDelete(0, channelDelete.build()).block()
+
+		val channelAfterDelete = dataAccessor.getChannelById(channelId).block()
+		assertThat(channelAfterDelete).isNull()
 	}
 
 
