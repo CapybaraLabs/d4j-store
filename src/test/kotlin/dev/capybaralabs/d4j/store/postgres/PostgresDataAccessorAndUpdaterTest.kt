@@ -13,6 +13,7 @@ import discord4j.discordjson.json.MessageData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.ChannelDelete
+import discord4j.discordjson.json.gateway.ChannelUpdate
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.possible.Possible
@@ -90,6 +91,21 @@ internal class PostgresDataAccessorAndUpdaterTest {
 	}
 
 	@Test
+	fun onChannelDelete_deleteChannel() {
+		val channelId = generateUniqueSnowflakeId()
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).build())
+		updater.onChannelCreate(0, channelCreate.build()).block()
+
+		val channel = accessor.getChannelById(channelId).block()!!
+		assertThat(channel.id().asLong()).isEqualTo(channelId)
+
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
+		updater.onChannelDelete(0, channelDelete.build()).block()
+
+		assertThat(accessor.getChannelById(channelId).block()).isNull()
+	}
+
+	@Test
 	fun givenChannelInGuild_onChannelDelete_removeChannelFromGuild() {
 		val channelId = generateUniqueSnowflakeId()
 		val guildId = generateUniqueSnowflakeId()
@@ -109,6 +125,7 @@ internal class PostgresDataAccessorAndUpdaterTest {
 		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
 			.anyMatch { it.id().asLong() == channelId }
 
+
 		val channelDelete = ChannelDelete.builder().channel(channel(channelId).guildId(guildId).build())
 		updater.onChannelDelete(0, channelDelete.build()).block()
 
@@ -122,12 +139,10 @@ internal class PostgresDataAccessorAndUpdaterTest {
 	@Test
 	fun onChannelDelete_deleteMessagesInChannel() {
 		val channelId = generateUniqueSnowflakeId()
-
-		// Create channel
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).build())
 		updater.onChannelCreate(0, channelCreate.build()).block()
 
-		// Send message
+
 		val messageId = generateUniqueSnowflakeId()
 		val messageCreate = MessageCreate.builder()
 			.message(message(channelId, messageId, generateUniqueSnowflakeId()).build())
@@ -138,14 +153,29 @@ internal class PostgresDataAccessorAndUpdaterTest {
 		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(1)
 
 
-		// Delete
 		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
 		updater.onChannelDelete(0, channelDelete.build()).block()
 
-		assertThat(accessor.getChannelById(channelId).block()).isNull()
-
 		assertThat(accessor.getMessagesInChannel(channelId).collectList().block()!!).isEmpty()
 		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
+	}
+
+	@Test
+	fun onChannelUpdate_updateChannel() {
+		val channelId = generateUniqueSnowflakeId()
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).name("Alpha Quadrant").build())
+		updater.onChannelCreate(0, channelCreate.build()).block()
+
+		val alphaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(alphaChannel.name().isAbsent).isFalse
+		assertThat(alphaChannel.name().get()).isEqualTo("Alpha Quadrant")
+
+		val channelUpdate = ChannelUpdate.builder().channel(channel(channelId).name("Delta Quadrant").build())
+		updater.onChannelUpdate(0, channelUpdate.build()).block()
+
+		val deltaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(deltaChannel.name().isAbsent).isFalse
+		assertThat(deltaChannel.name().get()).isEqualTo("Delta Quadrant")
 	}
 
 	// TODO fun onGuildDelete_deleteMessageInChannels()
