@@ -182,7 +182,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())
 					.hasElement().map { !it }
 			}
-			.flatMap { repos.presences.save(guildId, createPresence(it), shardIndex) }
+			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
 			.then()
 
 		val saveRoles = Flux.fromIterable(createData.roles())
@@ -207,7 +207,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.and(saveVoiceStates)
 	}
 
-	private fun createPresence(member: MemberData): PresenceData {
+	private fun createOfflinePresence(member: MemberData): PresenceData {
 		return PresenceData.builder()
 			.user(
 				PartialUserData.builder()
@@ -381,7 +381,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())
 					.hasElement().map { !it }
 			}
-			.flatMap { repos.presences.save(guildId, createPresence(it), shardIndex) }
+			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
 			.then()
 
 		return addMemberIds

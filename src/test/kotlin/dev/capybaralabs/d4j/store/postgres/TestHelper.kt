@@ -1,15 +1,25 @@
 package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.ChannelData
+import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.EmojiData
 import discord4j.discordjson.json.GuildCreateData
 import discord4j.discordjson.json.ImmutableChannelData
 import discord4j.discordjson.json.ImmutableEmojiData
 import discord4j.discordjson.json.ImmutableGuildCreateData
+import discord4j.discordjson.json.ImmutableMemberData
 import discord4j.discordjson.json.ImmutableMessageData
+import discord4j.discordjson.json.ImmutablePresenceData
+import discord4j.discordjson.json.ImmutableRoleData
 import discord4j.discordjson.json.ImmutableUserData
+import discord4j.discordjson.json.ImmutableVoiceStateData
+import discord4j.discordjson.json.MemberData
 import discord4j.discordjson.json.MessageData
+import discord4j.discordjson.json.PartialUserData
+import discord4j.discordjson.json.PresenceData
+import discord4j.discordjson.json.RoleData
 import discord4j.discordjson.json.UserData
+import discord4j.discordjson.json.VoiceStateData
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
@@ -33,6 +43,7 @@ internal val storeLayout = PostgresStoreLayout(
 internal val accessor = storeLayout.dataAccessor
 internal val updater = storeLayout.gatewayDataUpdater
 
+// TODO add & verify all optional parameters
 
 internal fun channel(channelId: Long): ImmutableChannelData.Builder {
     return ChannelData.builder()
@@ -64,6 +75,13 @@ internal fun guild(guildId: Long): ImmutableGuildCreateData.Builder {
         .nsfwLevel(69)
 }
 
+internal fun member(userId: Long): ImmutableMemberData.Builder {
+    return MemberData.builder()
+        .user(user(userId).build())
+        .deaf(false)
+        .mute(false)
+}
+
 internal fun message(channelId: Long, messageId: Long, authorId: Long): ImmutableMessageData.Builder {
     return MessageData.builder()
         .id(messageId)
@@ -77,9 +95,42 @@ internal fun message(channelId: Long, messageId: Long, authorId: Long): Immutabl
         .content("🖖")
 }
 
+internal fun presence(userId: Long): ImmutablePresenceData.Builder {
+    return PresenceData.builder()
+        .user(PartialUserData.builder().id(userId).build())
+        .status("Playing Tongo")
+        .clientStatus(ClientStatusData.builder().build())
+}
+
+internal fun role(roleId: Long): ImmutableRoleData.Builder {
+    return RoleData.builder()
+        .id(roleId)
+        .name("Ensign")
+        .color(0xFFFFFF)
+        .hoist(false)
+        .permissions(8)
+        .mentionable(true)
+        .position(Short.MAX_VALUE.toInt())
+        .managed(false)
+}
+
 internal fun user(userId: Long): ImmutableUserData.Builder {
     return UserData.builder()
         .username("Q")
         .discriminator("6969")
         .id(userId)
+}
+
+internal fun voiceState(guildId: Long, channelId: Long, userId: Long): ImmutableVoiceStateData.Builder {
+    return VoiceStateData.builder()
+        .guildId(guildId)
+        .channelId(channelId)
+        .userId(userId)
+        .sessionId("$guildId:$channelId:$userId")
+        .deaf(false)
+        .mute(true)
+        .selfDeaf(false)
+        .selfMute(true)
+        .selfVideo(false)
+        .suppress(true)
 }
