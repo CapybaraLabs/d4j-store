@@ -34,6 +34,36 @@ internal val accessor = storeLayout.dataAccessor
 internal val updater = storeLayout.gatewayDataUpdater
 
 
+internal fun channel(channelId: Long): ImmutableChannelData.Builder {
+    return ChannelData.builder()
+        .id(channelId)
+        .type(2)
+}
+
+internal fun emoji(emojiId: Long): ImmutableEmojiData.Builder {
+    return EmojiData.builder()
+        .id(emojiId)
+}
+
+internal fun guild(guildId: Long): ImmutableGuildCreateData.Builder {
+    return GuildCreateData.builder()
+        .id(guildId)
+        .name("Deep Space 9")
+        .ownerId(generateUniqueSnowflakeId())
+        .verificationLevel(42)
+        .region("Alpha Quadrant")
+        .afkTimeout(42)
+        .defaultMessageNotifications(42)
+        .explicitContentFilter(42)
+        .mfaLevel(42)
+        .premiumTier(42)
+        .preferredLocale("Klingon")
+        .joinedAt(Instant.now().toString())
+        .large(false)
+        .memberCount(42)
+        .nsfwLevel(69)
+}
+
 internal fun message(channelId: Long, messageId: Long, authorId: Long): ImmutableMessageData.Builder {
     return MessageData.builder()
         .id(messageId)
@@ -52,34 +82,4 @@ internal fun user(userId: Long): ImmutableUserData.Builder {
         .username("Q")
         .discriminator("6969")
         .id(userId)
-}
-
-internal fun emoji(emojiId: Long): ImmutableEmojiData.Builder {
-    return EmojiData.builder()
-        .id(emojiId)
-}
-
-internal fun channel(channelId: Long): ImmutableChannelData.Builder {
-    return ChannelData.builder()
-        .id(channelId)
-        .type(2)
-}
-
-internal fun ds9Guild(guildId: Long): ImmutableGuildCreateData.Builder {
-    return GuildCreateData.builder()
-        .id(guildId)
-        .name("Deep Space 9")
-        .ownerId(generateUniqueSnowflakeId())
-        .verificationLevel(42)
-        .region("Alpha Quadrant")
-        .afkTimeout(42)
-        .defaultMessageNotifications(42)
-        .explicitContentFilter(42)
-        .mfaLevel(42)
-        .premiumTier(42)
-        .preferredLocale("Klingon")
-        .joinedAt(Instant.now().toString())
-        .large(false)
-        .memberCount(42)
-        .nsfwLevel(69)
 }

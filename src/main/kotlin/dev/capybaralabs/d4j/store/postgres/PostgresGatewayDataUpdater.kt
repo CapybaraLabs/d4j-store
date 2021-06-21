@@ -168,22 +168,11 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.map { ChannelData.builder().from(it).guildId(guildId).build() }
 			.flatMap { repos.channels.save(it, shardIndex) }
 
-		val saveRoles = Flux.fromIterable(createData.roles())
-			.flatMap { repos.roles.save(guildId, it, shardIndex) }
-
 		val saveEmojis = Flux.fromIterable(createData.emojis())
 			.flatMap { repos.emojis.save(guildId, it, shardIndex) }
 
 		val saveMembers = Flux.fromIterable(createData.members())
 			.flatMap { repos.members.save(guildId, it, shardIndex) }
-
-		val saveUsers = Flux.fromIterable(createData.members())
-			.map { it.user() }
-			.flatMap { repos.users.save(it) }
-
-		val saveVoiceStates = Flux.fromIterable(createData.voiceStates())
-			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
-			.flatMap { repos.voiceStates.save(it, shardIndex) }
 
 		val savePresences = Flux.fromIterable(createData.presences())
 			.flatMap { repos.presences.save(guildId, it, shardIndex) }
@@ -196,15 +185,26 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.flatMap { repos.presences.save(guildId, createPresence(it), shardIndex) }
 			.then()
 
+		val saveRoles = Flux.fromIterable(createData.roles())
+			.flatMap { repos.roles.save(guildId, it, shardIndex) }
+
+		val saveUsers = Flux.fromIterable(createData.members())
+			.map { it.user() }
+			.flatMap { repos.users.save(it) }
+
+		val saveVoiceStates = Flux.fromIterable(createData.voiceStates())
+			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
+			.flatMap { repos.voiceStates.save(it, shardIndex) }
+
 		return saveGuild
 			.and(saveChannels)
-			.and(saveRoles)
 			.and(saveEmojis)
 			.and(saveMembers)
-			.and(saveUsers)
-			.and(saveVoiceStates)
 			.and(savePresences)
 			.and(saveOfflinePresences)
+			.and(saveRoles)
+			.and(saveUsers)
+			.and(saveVoiceStates)
 	}
 
 	private fun createPresence(member: MemberData): PresenceData {

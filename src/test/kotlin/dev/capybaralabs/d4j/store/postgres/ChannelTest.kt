@@ -38,7 +38,7 @@ internal class ChannelTest {
 		val channelId = generateUniqueSnowflakeId()
 		val guildId = generateUniqueSnowflakeId()
 		val guildCreate = GuildCreate.builder()
-			.guild(ds9Guild(guildId).build())
+			.guild(guild(guildId).build())
 			.build()
 		updater.onGuildCreate(0, guildCreate).blockOptional()
 
@@ -79,7 +79,7 @@ internal class ChannelTest {
 		val channelId = generateUniqueSnowflakeId()
 		val guildId = generateUniqueSnowflakeId()
 		val guildCreate = GuildCreate.builder()
-			.guild(ds9Guild(guildId).build())
+			.guild(guild(guildId).build())
 			.build()
 		updater.onGuildCreate(0, guildCreate).blockOptional()
 
