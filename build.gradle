@@ -5,6 +5,7 @@ plugins {
 	id "maven-publish"
 	id "jacoco"
 	id "org.sonarqube" version "3.3"
+	id "com.adarshr.test-logger" version "3.0.0"
 }
 
 group = "dev.capybaralabs.d4j.store.postgres"
@@ -47,6 +48,10 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+}
+
+testlogger {
+	theme "mocha"
 }
 
 jacocoTestReport {
