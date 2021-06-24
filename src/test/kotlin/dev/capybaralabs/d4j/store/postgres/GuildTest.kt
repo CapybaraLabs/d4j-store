@@ -149,7 +149,6 @@ internal class GuildTest {
 			.anyMatch { it.user().id().asLong() == userIdA }
 			.anyMatch { it.user().id().asLong() == userIdB }
 		assertThat(accessor.members.collectList().block())
-			.hasSize(2)
 			.anyMatch { it.user().id().asLong() == userIdA }
 			.anyMatch { it.user().id().asLong() == userIdB }
 	}
@@ -190,7 +189,6 @@ internal class GuildTest {
 			.anyMatch { it.user().id().asLong() == userIdA }
 			.anyMatch { it.user().id().asLong() == userIdB }
 		assertThat(accessor.presences.collectList().block())
-			.hasSize(2)
 			.anyMatch { it.user().id().asLong() == userIdA }
 			.anyMatch { it.user().id().asLong() == userIdB }
 	}
