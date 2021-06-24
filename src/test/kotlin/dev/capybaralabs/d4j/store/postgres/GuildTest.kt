@@ -25,7 +25,7 @@ internal class GuildTest {
 		assertThat(guild.id().asLong()).isEqualTo(guildId)
 		assertThat(guild.name()).isEqualTo("Deep Space 9")
 
-		assertThat(accessor.guilds.collectList().block()!!)
+		assertThat(accessor.guilds.collectList().block())
 			.anyMatch { it.id().asLong() == guildId }
 	}
 
@@ -261,7 +261,7 @@ internal class GuildTest {
 		val userB = accessor.getUserById(userIdB).block()!!
 		assertThat(userB.id().asLong()).isEqualTo(userIdB)
 
-		assertThat(accessor.users.collectList().block()!!)
+		assertThat(accessor.users.collectList().block())
 			.anyMatch { it.id().asLong() == userIdA }
 			.anyMatch { it.id().asLong() == userIdB }
 	}

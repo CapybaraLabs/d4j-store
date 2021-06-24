@@ -29,7 +29,7 @@ internal class ChannelTest {
 		assertThat(channel.name().get()).isEqualTo("Emergency Medical Holographic Channel")
 		assertThat(channel.guildId().isAbsent).isTrue
 
-		assertThat(accessor.channels.collectList().block()!!)
+		assertThat(accessor.channels.collectList().block())
 			.anyMatch { it.id().asLong() == channelId }
 	}
 
@@ -55,7 +55,7 @@ internal class ChannelTest {
 			.contains(Id.of(channelId))
 		assertThat(accessor.countChannelsInGuild(guildId).block()!!)
 			.isEqualTo(1)
-		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block())
 			.anyMatch { it.id().asLong() == channelId }
 	}
 
@@ -91,7 +91,7 @@ internal class ChannelTest {
 			.contains(Id.of(channelId))
 		assertThat(accessor.countChannelsInGuild(guildId).block()!!)
 			.isEqualTo(1)
-		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block())
 			.anyMatch { it.id().asLong() == channelId }
 
 
@@ -101,7 +101,7 @@ internal class ChannelTest {
 		assertThat(accessor.getGuildById(guildId).block()!!.channels())
 			.doesNotContain(Id.of(channelId))
 		assertThat(accessor.countChannelsInGuild(guildId).block()!!).isEqualTo(0)
-		assertThat(accessor.getChannelsInGuild(guildId).collectList().block()!!)
+		assertThat(accessor.getChannelsInGuild(guildId).collectList().block())
 			.noneMatch { it.id().asLong() == channelId }
 	}
 
@@ -125,7 +125,7 @@ internal class ChannelTest {
 		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
 		updater.onChannelDelete(0, channelDelete.build()).block()
 
-		assertThat(accessor.getMessagesInChannel(channelId).collectList().block()!!).isEmpty()
+		assertThat(accessor.getMessagesInChannel(channelId).collectList().block()).isEmpty()
 		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(0)
 	}
 

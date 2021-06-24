@@ -31,8 +31,7 @@ internal class MessageTest {
 		assertThat(message.author().id().asLong()).isEqualTo(authorId)
 		assertThat(message.content()).isEqualTo("🖖")
 
-		val count = accessor.countMessagesInChannel(channelId).block()!!
-		assertThat(count).isEqualTo(1)
+		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isEqualTo(1)
 
 		val channel = accessor.getChannelById(channelId).block()!!
 		assertThat(channel.lastMessageId().get().get().asLong()).isEqualTo(messageId)
