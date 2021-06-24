@@ -1,6 +1,5 @@
 package dev.capybaralabs.d4j.store.postgres
 
-import discord4j.discordjson.json.VoiceStateData
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.possible.Possible
 import org.assertj.core.api.Assertions.assertThat
@@ -175,9 +174,11 @@ internal class GuildTest {
 
 		val presenceA = accessor.getPresenceById(guildId, userIdA).block()!!
 		assertThat(presenceA.user().id().asLong()).isEqualTo(userIdA)
+		assertThat(presenceA.status()).isEqualTo("online")
 
 		val presenceB = accessor.getPresenceById(guildId, userIdB).block()!!
 		assertThat(presenceB.user().id().asLong()).isEqualTo(userIdB)
+		assertThat(presenceA.status()).isEqualTo("online")
 
 		val count = accessor.countPresencesInGuild(guildId).block()!!
 		assertThat(count).isEqualTo(2)
@@ -329,14 +330,6 @@ internal class GuildTest {
 			.anyMatch(isVoiceState(guildId, channelIdA, userIdA))
 			.anyMatch(isVoiceState(guildId, channelIdB, userIdB))
 			.anyMatch(isVoiceState(guildId, channelIdB, userIdC))
-	}
-
-	private fun isVoiceState(guildId: Long, channelId: Long, userId: Long): (VoiceStateData) -> Boolean {
-		return {
-			it.guildId().get().asLong() == guildId
-				&& it.channelId().get().asLong() == channelId
-				&& it.userId().asLong() == userId
-		}
 	}
 
 

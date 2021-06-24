@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres
 
+import discord4j.discordjson.json.ActivityData
 import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.EmojiData
@@ -20,6 +21,7 @@ import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
+import discord4j.discordjson.possible.Possible
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.spi.ConnectionFactories
@@ -98,8 +100,22 @@ internal fun message(channelId: Long, messageId: Long, authorId: Long): Immutabl
 internal fun presence(userId: Long): ImmutablePresenceData.Builder {
     return PresenceData.builder()
         .user(PartialUserData.builder().id(userId).build())
-        .status("Playing Tongo")
-        .clientStatus(ClientStatusData.builder().build())
+        .status("online")
+        .clientStatus(
+            ClientStatusData.builder()
+                .desktop("idle")
+                .mobile("online")
+                .web(Possible.absent())
+                .build()
+        )
+        .addActivity(
+            ActivityData.builder()
+                .id(userId.toString())
+                .name("Tongo")
+                .type(0)
+                .createdAt(Instant.now().toEpochMilli())
+                .build()
+        )
 }
 
 internal fun role(roleId: Long): ImmutableRoleData.Builder {
@@ -133,4 +149,13 @@ internal fun voiceState(guildId: Long, channelId: Long, userId: Long): Immutable
         .selfMute(true)
         .selfVideo(false)
         .suppress(true)
+}
+
+
+internal fun isVoiceState(guildId: Long, channelId: Long, userId: Long): (VoiceStateData) -> Boolean {
+    return {
+        it.guildId().get().asLong() == guildId
+            && it.channelId().get().asLong() == channelId
+            && it.userId().asLong() == userId
+    }
 }
