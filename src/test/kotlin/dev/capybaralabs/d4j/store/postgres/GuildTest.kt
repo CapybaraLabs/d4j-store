@@ -195,6 +195,52 @@ internal class GuildTest {
 	}
 
 	@Test
+	fun onGuildCreate_createOfflinePresences() {
+		val guildId = generateUniqueSnowflakeId()
+		val userIdA = generateUniqueSnowflakeId()
+		val userIdB = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.approximatePresenceCount(2)
+					.addMembers(
+						member(userIdA).build(),
+						member(userIdB).build(),
+					)
+					.addPresences(
+						presence(userIdA).status("dnd").build(),
+					)
+					.build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+
+		val presenceA = accessor.getPresenceById(guildId, userIdA).block()!!
+		assertThat(presenceA.user().id().asLong()).isEqualTo(userIdA)
+		assertThat(presenceA.status()).isEqualTo("dnd")
+
+		val presenceB = accessor.getPresenceById(guildId, userIdB).block()!!
+		assertThat(presenceB.user().id().asLong()).isEqualTo(userIdB)
+		assertThat(presenceB.status()).isEqualTo("offline")
+
+		val count = accessor.countPresencesInGuild(guildId).block()!!
+		assertThat(count).isEqualTo(2)
+
+		val guild = accessor.getGuildById(guildId).block()!!
+		assertThat(guild.approximatePresenceCount().get()).isEqualTo(2)
+		assertThat(accessor.getPresencesInGuild(guildId).collectList().block())
+			.hasSize(2)
+			.anyMatch { it.user().id().asLong() == userIdA && it.status() == "dnd" }
+			.anyMatch { it.user().id().asLong() == userIdB && it.status() == "offline" }
+		assertThat(accessor.presences.collectList().block())
+			.anyMatch { it.user().id().asLong() == userIdA && it.status() == "dnd" }
+			.anyMatch { it.user().id().asLong() == userIdB && it.status() == "offline" }
+
+	}
+
+	@Test
 	fun onGuildCreate_createRoles() {
 		val guildId = generateUniqueSnowflakeId()
 		val roleIdA = generateUniqueSnowflakeId()
@@ -333,6 +379,5 @@ internal class GuildTest {
 	}
 
 
-	// TODO offline presences test
 	// TODO test roles+members
 }
