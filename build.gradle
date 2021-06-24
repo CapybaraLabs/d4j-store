@@ -44,6 +44,7 @@ dependencies {
 	testImplementation "org.testcontainers:postgresql"
 	testImplementation "org.testcontainers:r2dbc"
 	testImplementation "ch.qos.logback:logback-classic"
+	testImplementation "io.projectreactor:reactor-tools"
 }
 
 test {
@@ -52,6 +53,7 @@ test {
 
 testlogger {
 	theme "mocha"
+	showFullStackTraces true
 }
 
 jacocoTestReport {

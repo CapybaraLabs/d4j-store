@@ -28,6 +28,7 @@ import io.r2dbc.spi.ConnectionFactories
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
+import reactor.tools.agent.ReactorDebugAgent
 
 
 private val LONGS = AtomicLong(ThreadLocalRandom.current().nextLong(Long.MAX_VALUE / 2, Long.MAX_VALUE))
@@ -35,13 +36,17 @@ internal fun generateUniqueSnowflakeId(): Long {
     return LONGS.decrementAndGet()
 }
 
-internal val storeLayout = PostgresStoreLayout(
-    ConnectionPool(
+internal val storeLayout = PostgresStoreLayout(connectionPool())
+private fun connectionPool(): ConnectionPool {
+    ReactorDebugAgent.init()
+    ReactorDebugAgent.processExistingClasses()
+    return ConnectionPool(
         ConnectionPoolConfiguration
             .builder(ConnectionFactories.get("r2dbc:tc:postgresql:///test?TC_IMAGE_TAG=13"))
             .build()
     )
-)
+}
+
 internal val accessor = storeLayout.dataAccessor
 internal val updater = storeLayout.gatewayDataUpdater
 
