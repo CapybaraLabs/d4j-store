@@ -80,7 +80,8 @@ internal fun <T> Optional<T>.toPossible(): Possible<T> = map { Possible.of(it) }
 /**
  * Collapse a nested Possible<Optional<>> into a Possible
  */
-internal fun <T> Possible<Optional<T>>.collapse(): Possible<T> = toOptional().flatMap { it }.map { Possible.of(it) }.orElse(Possible.absent())
+internal fun <T> Possible<Optional<T>>.collapse(): Possible<T> =
+	toOptional().flatMap { it }.map { Possible.of(it) }.orElse(Possible.absent())
 
 
 /**
