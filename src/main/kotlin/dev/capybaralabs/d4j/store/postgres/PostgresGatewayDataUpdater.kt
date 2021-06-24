@@ -266,33 +266,36 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	override fun onGuildEmojisUpdate(shardIndex: Int, dispatch: GuildEmojisUpdate): Mono<Set<EmojiData>> {
 		val guildId = dispatch.guildId().asLong()
 
+		// TODO granular updates, loading the object and saving it back is suboptimal?
 
-		val updateGuild: (GuildData) -> Mono<Void> = { guild: GuildData ->
+		val updateGuild: (GuildData) -> Mono<Void> = { oldGuild: GuildData ->
 			val updated = GuildData.builder()
-				.from(guild)
-				.emojis(
-					dispatch.emojis()
-						.map { it.id() }
-						.filter { it.isPresent }
-						.map { it.get() }
-				)
+				.from(oldGuild)
+				.emojis(dispatch.emojis().mapNotNull { it.id().orElse(null) })
 				.build()
 			repos.guilds.save(updated, shardIndex)
-		} // TODO granular updates, loading the object and saving it back is retarded
+		}
 
+		val deleteEmojis: (GuildData) -> Mono<Int> = { oldGuild: GuildData ->
+			// delete those emojis that are in the old guild but not the dispatch
+			val toDelete = oldGuild.emojis()
+				.filter { id -> dispatch.emojis().none { emoji -> emoji.id().isPresent && emoji.id().get() == id } }
+				.map { it.asLong() }
+			repos.emojis.deleteByIds(toDelete)
+		}
 
 		val saveEmojis = Flux.fromIterable(dispatch.emojis())
 			.flatMap { repos.emojis.save(guildId, it, shardIndex) } // TODO bulk operation
 
-		// TODO what happens to deleted emojis?
-
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
 				updateGuild.invoke(guild)
+					.and(deleteEmojis.invoke(guild))
 					.and(saveEmojis)
-					.thenMany(Flux.fromIterable(guild.emojis())
-						.map { it.asLong() }
-						.flatMap { repos.emojis.getEmojiById(guildId, it) } // TODO bulk operation
+					.thenMany(
+						Flux.fromIterable(guild.emojis())
+							.map { it.asLong() }
+							.flatMap { repos.emojis.getEmojiById(guildId, it) } // TODO bulk operation
 					)
 			}
 			.collectList().map { it.toSet() }
