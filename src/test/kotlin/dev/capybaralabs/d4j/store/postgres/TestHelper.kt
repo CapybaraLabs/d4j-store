@@ -19,8 +19,10 @@ import discord4j.discordjson.json.MessageData
 import discord4j.discordjson.json.PartialUserData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
+import discord4j.discordjson.json.UnavailableGuildData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
+import discord4j.discordjson.json.gateway.GuildDelete
 import discord4j.discordjson.possible.Possible
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
@@ -163,4 +165,10 @@ internal fun isVoiceState(guildId: Long, channelId: Long, userId: Long): (VoiceS
             && it.channelId().get().asLong() == channelId
             && it.userId().asLong() == userId
     }
+}
+
+internal fun guildDelete(guildId: Long): GuildDelete {
+    return GuildDelete.builder()
+        .guild(UnavailableGuildData.builder().id(guildId).build())
+        .build()
 }
