@@ -1,13 +1,12 @@
 package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.gateway.GuildCreate
+import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.possible.Possible
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class GuildTest {
-
-	// TODO fun onGuildDelete_deleteMessageInChannels()
 
 	@Test
 	fun onGuildCreate_createGuild() {
@@ -479,10 +478,37 @@ internal class GuildTest {
 			.noneMatch { it.user().id().asLong() == userId }
 	}
 
-//	@Test
-//	fun onGuildDelete_deleteMessages() {
-//		TODO()
-//	}
+	@Test
+	fun onGuildDelete_deleteMessages() {
+		val guildId = generateUniqueSnowflakeId()
+		val channelId = generateUniqueSnowflakeId()
+		val messageId = generateUniqueSnowflakeId()
+		val authorId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.addChannels(channel(channelId).guildId(Possible.absent()).build())
+					.build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		val messageCreate = MessageCreate.builder()
+			.message(message(channelId, messageId, authorId).build())
+			.build()
+
+		updater.onMessageCreate(0, messageCreate).block()
+
+		assertThat(accessor.getMessageById(channelId, messageId).block())
+			.matches { it.id().asLong() == messageId && it.author().id().asLong() == authorId }
+		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isOne
+
+		updater.onGuildDelete(0, guildDelete(guildId)).block()
+
+		assertThat(accessor.getMessageById(channelId, messageId).block()).isNull()
+		assertThat(accessor.countMessagesInChannel(channelId).block()!!).isZero
+	}
 
 	@Test
 	fun onGuildDelete_deletePresences() {

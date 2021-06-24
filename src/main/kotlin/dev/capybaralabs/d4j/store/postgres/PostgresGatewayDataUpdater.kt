@@ -248,16 +248,17 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				val deleteRoles = repos.roles.deleteByIds(roleIds)
 				val deleteEmojis = repos.emojis.deleteByIds(emojiIds)
 				val deleteMembers = repos.members.deleteByGuildId(guildId)
-				// TODO delete messages
+				val deleteMessages = repos.messages.deleteByChannelIds(guild.channels().map { it.asLong() })
 				// TODO delete no longer visible users
 				val deleteVoiceStates = repos.voiceStates.deleteByGuildId(guildId)
 				val deletePresences = repos.presences.deleteByGuildId(guildId)
 				deleteChannels
-					.and(deleteRoles)
 					.and(deleteEmojis)
 					.and(deleteMembers)
-					.and(deleteVoiceStates)
+					.and(deleteMessages)
 					.and(deletePresences)
+					.and(deleteRoles)
+					.and(deleteVoiceStates)
 					.thenReturn(guild)
 			}
 			.flatMap { repos.guilds.delete(guildId).thenReturn(it) }
