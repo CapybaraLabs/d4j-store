@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.gateway.GuildCreate
+import discord4j.discordjson.json.gateway.GuildUpdate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.possible.Possible
 import org.assertj.core.api.Assertions.assertThat
@@ -625,6 +626,35 @@ internal class GuildTest {
 			.noneMatch(isVoiceState(guildId, channelIdA, userIdA))
 			.noneMatch(isVoiceState(guildId, channelIdB, userIdB))
 			.noneMatch(isVoiceState(guildId, channelIdB, userIdC))
+	}
+
+	@Test
+	fun onGuildUpdate_updateGuild() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.name("Deep Space 9")
+					.build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).blockOptional()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.matches { it.name() == "Deep Space 9" }
+
+		val guildUpdate = GuildUpdate.builder()
+			.guild(guildUpdate(guildId).build())
+			.build()
+
+
+		updater.onGuildUpdate(0, guildUpdate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.matches { it.name() == "Terok Nor" }
 	}
 
 	// TODO test roles+members

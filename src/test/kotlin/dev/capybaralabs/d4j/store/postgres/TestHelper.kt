@@ -5,9 +5,11 @@ import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.EmojiData
 import discord4j.discordjson.json.GuildCreateData
+import discord4j.discordjson.json.GuildUpdateData
 import discord4j.discordjson.json.ImmutableChannelData
 import discord4j.discordjson.json.ImmutableEmojiData
 import discord4j.discordjson.json.ImmutableGuildCreateData
+import discord4j.discordjson.json.ImmutableGuildUpdateData
 import discord4j.discordjson.json.ImmutableMemberData
 import discord4j.discordjson.json.ImmutableMessageData
 import discord4j.discordjson.json.ImmutablePresenceData
@@ -83,6 +85,23 @@ internal fun guild(guildId: Long): ImmutableGuildCreateData.Builder {
 		.memberCount(42)
 		.nsfwLevel(69)
 }
+
+internal fun guildUpdate(guildId: Long): ImmutableGuildUpdateData.Builder {
+	return GuildUpdateData.builder()
+		.id(guildId)
+		.name("Terok Nor")
+		.ownerId(generateUniqueSnowflakeId())
+		.verificationLevel(42)
+		.region("Alpha Quadrant")
+		.afkTimeout(42)
+		.defaultMessageNotifications(42)
+		.explicitContentFilter(42)
+		.mfaLevel(42)
+		.premiumTier(42)
+		.preferredLocale("Cardassian")
+		.nsfwLevel(69)
+}
+
 
 internal fun member(userId: Long): ImmutableMemberData.Builder {
 	return MemberData.builder()
