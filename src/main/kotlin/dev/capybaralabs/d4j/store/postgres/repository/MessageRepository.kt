@@ -66,8 +66,8 @@ internal class MessageRepository(private val factory: ConnectionFactory, private
 	fun deleteByIds(messageIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id IN $1")
-					.bind("$1", messageIds)
+				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id = ANY($1)")
+					.bind("$1", messageIds.toTypedArray())
 					.executeConsumingSingle()
 			}
 		}
@@ -145,8 +145,8 @@ internal class MessageRepository(private val factory: ConnectionFactory, private
 	fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
-				it.createStatement("SELECT data FROM d4j_discord_message WHERE message_id IN $1")
-					.bind("$1", messageIds)
+				it.createStatement("SELECT data FROM d4j_discord_message WHERE message_id = ANY($1)")
+					.bind("$1", messageIds.toTypedArray())
 					.execute().deserializeManyFromData(MessageData::class.java, serde)
 			}
 		}

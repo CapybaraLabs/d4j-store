@@ -60,8 +60,8 @@ internal class EmojiRepository(private val factory: ConnectionFactory, private v
 	fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id IN $1")
-					.bind("$1", emojiIds)
+				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1)")
+					.bind("$1", emojiIds.toTypedArray())
 					.executeConsumingSingle()
 			}
 		}

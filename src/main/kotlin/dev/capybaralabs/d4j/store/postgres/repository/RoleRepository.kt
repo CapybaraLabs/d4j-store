@@ -67,8 +67,8 @@ internal class RoleRepository(private val factory: ConnectionFactory, private va
 		return Mono.defer {
 			withConnection(factory) {
 				it
-					.createStatement("DELETE FROM d4j_discord_role WHERE role_id IN $1")
-					.bind("$1", roleIds)
+					.createStatement("DELETE FROM d4j_discord_role WHERE role_id = ANY($1)")
+					.bind("$1", roleIds.toTypedArray())
 					.executeConsumingSingle()
 			}
 		}

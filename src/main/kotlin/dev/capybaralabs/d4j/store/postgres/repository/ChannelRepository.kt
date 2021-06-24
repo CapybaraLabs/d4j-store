@@ -74,8 +74,8 @@ internal class ChannelRepository(private val factory: ConnectionFactory, private
 	fun deleteByIds(channelIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id IN $1")
-					.bind("$1", channelIds)
+				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = ANY($1)")
+					.bind("$1", channelIds.toTypedArray())
 					.executeConsumingSingle()
 			}
 		}
