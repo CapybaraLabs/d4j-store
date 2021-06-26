@@ -12,6 +12,7 @@ import discord4j.discordjson.json.ImmutableGuildCreateData
 import discord4j.discordjson.json.ImmutableGuildUpdateData
 import discord4j.discordjson.json.ImmutableMemberData
 import discord4j.discordjson.json.ImmutableMessageData
+import discord4j.discordjson.json.ImmutablePartialUserData
 import discord4j.discordjson.json.ImmutablePresenceData
 import discord4j.discordjson.json.ImmutableRoleData
 import discord4j.discordjson.json.ImmutableUserData
@@ -125,7 +126,7 @@ internal fun message(channelId: Long, messageId: Long, authorId: Long): Immutabl
 
 internal fun presence(userId: Long): ImmutablePresenceData.Builder {
 	return PresenceData.builder()
-		.user(PartialUserData.builder().id(userId).build())
+		.user(partialUser(userId).build())
 		.status("online")
 		.clientStatus(
 			ClientStatusData.builder()
@@ -158,10 +159,18 @@ internal fun role(roleId: Long): ImmutableRoleData.Builder {
 
 internal fun user(userId: Long): ImmutableUserData.Builder {
 	return UserData.builder()
+		.id(userId)
 		.username("Q")
 		.discriminator("6969")
-		.id(userId)
 }
+
+internal fun partialUser(userId: Long): ImmutablePartialUserData.Builder {
+	return PartialUserData.builder()
+		.id(userId)
+		.username("Q")
+		.discriminator("6969")
+}
+
 
 internal fun voiceState(guildId: Long, channelId: Long, userId: Long): ImmutableVoiceStateData.Builder {
 	return VoiceStateData.builder()
@@ -191,3 +200,5 @@ internal fun guildDelete(guildId: Long): GuildDelete {
 		.guild(UnavailableGuildData.builder().id(guildId).build())
 		.build()
 }
+
+// TODO onShardInvalidation

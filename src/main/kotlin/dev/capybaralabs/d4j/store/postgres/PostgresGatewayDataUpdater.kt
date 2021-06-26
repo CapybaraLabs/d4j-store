@@ -177,6 +177,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		val savePresences = Flux.fromIterable(createData.presences())
 			.flatMap { repos.presences.save(guildId, it, shardIndex) }
 
+		// TODO why? addGuildMember does not create any presences
 		val saveOfflinePresences = Flux.fromIterable(createData.members())
 			.filterWhen { member ->
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())
@@ -307,10 +308,12 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		val member = dispatch.member()
 		val user = member.user()
 
-		val addMemberId = repos.guilds.getGuildById(guildId)
+		val addMemberToGuild = repos.guilds.getGuildById(guildId)
 			.map {
 				GuildData.builder().from(it)
-					.members(it.members().toList() + member.user().id()) // TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
+					.members(
+						it.members().toList() + member.user().id()
+					) // TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
 					.memberCount(it.memberCount() + 1)
 					.build()
 			}
@@ -319,9 +322,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		val saveMember = repos.members.save(guildId, member, shardIndex)
 		val saveUser = repos.users.save(user)
 
-		// TODO do we receive the presence individually?
-
-		return addMemberId
+		return addMemberToGuild
 			.and(saveMember)
 			.and(saveUser)
 	}
@@ -353,10 +354,11 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				else repos.users.deleteById(userId)
 			}
 
-		return member.flatMap {
-			Mono.`when`(removeMemberId, deleteMember, deletePresence, deleteOrphanUser)
-				.thenReturn(it)
-		}
+		val deletions = Mono.`when`(removeMemberId, deleteMember, deletePresence, deleteOrphanUser)
+
+		return member
+			.flatMap { deletions.thenReturn(it) }
+			.switchIfEmpty(deletions.then(Mono.empty()))
 	}
 
 	override fun onGuildMembersChunk(shardIndex: Int, dispatch: GuildMembersChunk): Mono<Void> {
@@ -380,6 +382,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		val saveUsers = Flux.fromIterable(members)
 			.flatMap { repos.users.save(it.user()) }
 
+		// TODO why? addGuildMember does not create any presences
 		val saveOfflinePresences = Flux.fromIterable(members)
 			.filterWhen { member ->
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())

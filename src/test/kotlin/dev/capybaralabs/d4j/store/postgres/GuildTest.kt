@@ -140,7 +140,10 @@ internal class GuildTest {
 		assertThat(count).isEqualTo(2)
 
 		val guild = accessor.getGuildById(guildId).block()!!
-		assertThat(guild.members()).hasSize(2)
+		assertThat(guild.members())
+			.hasSize(2)
+			.anyMatch { it.asLong() == userIdA }
+			.anyMatch { it.asLong() == userIdB }
 		assertThat(guild.memberCount()).isEqualTo(2)
 		assertThat(guild.approximateMemberCount().get()).isEqualTo(3)
 		assertThat(accessor.getMembersInGuild(guildId).collectList().block())
