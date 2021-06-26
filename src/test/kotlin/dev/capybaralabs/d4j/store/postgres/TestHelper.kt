@@ -12,6 +12,7 @@ import discord4j.discordjson.json.ImmutableGuildCreateData
 import discord4j.discordjson.json.ImmutableGuildUpdateData
 import discord4j.discordjson.json.ImmutableMemberData
 import discord4j.discordjson.json.ImmutableMessageData
+import discord4j.discordjson.json.ImmutablePartialMessageData
 import discord4j.discordjson.json.ImmutablePartialUserData
 import discord4j.discordjson.json.ImmutablePresenceData
 import discord4j.discordjson.json.ImmutableRoleData
@@ -19,6 +20,7 @@ import discord4j.discordjson.json.ImmutableUserData
 import discord4j.discordjson.json.ImmutableVoiceStateData
 import discord4j.discordjson.json.MemberData
 import discord4j.discordjson.json.MessageData
+import discord4j.discordjson.json.PartialMessageData
 import discord4j.discordjson.json.PartialUserData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
@@ -122,6 +124,12 @@ internal fun message(channelId: Long, messageId: Long, authorId: Long): Immutabl
 		.pinned(false)
 		.type(2)
 		.content("🖖")
+}
+
+internal fun partialMessage(channelId: Long, messageId: Long): ImmutablePartialMessageData.Builder {
+	return PartialMessageData.builder()
+		.id(messageId)
+		.channelId(channelId)
 }
 
 internal fun presence(userId: Long): ImmutablePresenceData.Builder {
