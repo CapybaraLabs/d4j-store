@@ -186,12 +186,17 @@ internal fun partialUser(userId: Long): ImmutablePartialUserData.Builder {
 }
 
 
-internal fun voiceState(guildId: Long, channelId: Long, userId: Long): ImmutableVoiceStateData.Builder {
+internal fun voiceStateInChannel(guildId: Long, channelId: Long, userId: Long): ImmutableVoiceStateData.Builder {
+	return voiceStateNoChannel(guildId, userId)
+		.channelId(channelId)
+		.sessionId("$guildId:$channelId:$userId")
+}
+
+internal fun voiceStateNoChannel(guildId: Long, userId: Long): ImmutableVoiceStateData.Builder {
 	return VoiceStateData.builder()
 		.guildId(guildId)
-		.channelId(channelId)
 		.userId(userId)
-		.sessionId("$guildId:$channelId:$userId")
+		.sessionId("")
 		.deaf(false)
 		.mute(true)
 		.selfDeaf(false)
@@ -216,3 +221,4 @@ internal fun guildDelete(guildId: Long): GuildDelete {
 }
 
 // TODO onShardInvalidation
+// TODO onReady

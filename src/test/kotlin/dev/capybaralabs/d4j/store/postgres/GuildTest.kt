@@ -314,6 +314,8 @@ internal class GuildTest {
 			.anyMatch { it.id().asLong() == userIdB }
 	}
 
+	// TODO do not create voice states without a channel
+
 	@Test
 	fun onGuildCreate_createVoiceStates() {
 		val guildId = generateUniqueSnowflakeId()
@@ -330,9 +332,9 @@ internal class GuildTest {
 						channel(channelIdB).build(),
 					)
 					.addVoiceStates(
-						voiceState(guildId, channelIdA, userIdA).build(),
-						voiceState(guildId, channelIdB, userIdB).build(),
-						voiceState(guildId, channelIdB, userIdC).build(),
+						voiceStateInChannel(guildId, channelIdA, userIdA).build(),
+						voiceStateInChannel(guildId, channelIdB, userIdB).build(),
+						voiceStateInChannel(guildId, channelIdB, userIdC).build(),
 					)
 					.build()
 			)
@@ -582,9 +584,9 @@ internal class GuildTest {
 						channel(channelIdB).build(),
 					)
 					.addVoiceStates(
-						voiceState(guildId, channelIdA, userIdA).build(),
-						voiceState(guildId, channelIdB, userIdB).build(),
-						voiceState(guildId, channelIdB, userIdC).build(),
+						voiceStateInChannel(guildId, channelIdA, userIdA).build(),
+						voiceStateInChannel(guildId, channelIdB, userIdB).build(),
+						voiceStateInChannel(guildId, channelIdB, userIdC).build(),
 					)
 					.build()
 			)
