@@ -59,6 +59,12 @@ internal val updater = storeLayout.gatewayDataUpdater
 
 // TODO add & verify all optional parameters
 
+// TODO use random alphanumerics or similar
+// TODO extract common assertions from tests at the end
+// TODO build library of shorthands to create/trigger events
+// TODO test retuning previous versions
+// TODO come up with a bunch of tests for shard stuff
+
 internal fun channel(channelId: Long): ImmutableChannelData.Builder {
 	return ChannelData.builder()
 		.id(channelId)
