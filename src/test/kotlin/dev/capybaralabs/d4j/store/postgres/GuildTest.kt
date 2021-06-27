@@ -750,6 +750,20 @@ internal class GuildTest {
 			.matches { it.name() == "Terok Nor" }
 	}
 
+	@Test
+	fun givenGuildNotExists_onGuildUpdate_doNothing() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildUpdate = GuildUpdate.builder()
+			.guild(guildUpdate(guildId).build())
+			.build()
+		updater.onGuildUpdate(0, guildUpdate).block()
+
+		assertThat(accessor.getGuildById(guildId).block()).isNull()
+		assertThat(accessor.guilds.collectList().block())
+			.noneMatch { it.id().asLong() == guildId }
+	}
+
+
 	// https://github.com/Discord4J/Discord4J/issues/429
 	@Test
 	fun afterChunkingLargeGuild_noDuplicateMembers() {

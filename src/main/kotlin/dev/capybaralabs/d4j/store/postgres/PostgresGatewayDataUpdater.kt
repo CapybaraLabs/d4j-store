@@ -469,7 +469,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	override fun onGuildUpdate(shardIndex: Int, dispatch: GuildUpdate): Mono<GuildData> {
 		val guildId = dispatch.guild().id().asLong()
 
-		// TODO what if there is no guild saved?
 		return repos.guilds.getGuildById(guildId)
 			.flatMap { oldGuildData ->
 				val newGuildData = GuildData.builder()
@@ -483,6 +482,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 							.map { it.get() }
 					)
 					.build()
+
 				repos.guilds
 					.save(newGuildData, shardIndex)
 					.thenReturn(oldGuildData)
