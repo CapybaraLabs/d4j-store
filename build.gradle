@@ -51,10 +51,12 @@ test {
 	useJUnitPlatform()
 	systemProperty "junit.jupiter.execution.parallel.enabled", "true"
 	systemProperty "junit.jupiter.execution.parallel.mode.default", "concurrent"
+	systemProperty "junit.jupiter.execution.parallel.mode.classes.default", "concurrent"
 }
 
 testlogger {
-	theme "mocha"
+	theme "mocha-parallel"
+	slowThreshold 500
 	showFullStackTraces true
 }
 
