@@ -613,32 +613,38 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		// remove reactor from message
 		return repos.messages.getMessageById(messageId)
 			.filter { message -> !message.reactions().isAbsent }
-			.map { oldMessage: MessageData ->
+			.flatMap { oldMessage: MessageData ->
 				val isSelf = userId == getSelfId()
 				val newMessageBuilder = MessageData.builder().from(oldMessage)
 				val reactions = oldMessage.reactions().get()
 
 				val existing: ReactionData? = reactions.find { it.equalsEmoji(dispatch.emoji()) }
 				if (existing != null) {
+					val newReactions: List<ReactionData>
 					if (existing.count() - 1 == 0) {
-						newMessageBuilder.reactions(reactions.toList() - existing)
+						newReactions = reactions.toList() - existing
 					} else {
 						val newExisting = ReactionData.builder()
 							.from(existing)
 							.count(existing.count() - 1)
 							.me(!isSelf && existing.me())
 							.build()
-						val newReactions = reactions.toMutableList()
+						newReactions = reactions.toMutableList()
 						newReactions.replaceAll {
 							when {
 								it.equalsEmoji(dispatch.emoji()) -> newExisting
 								else -> it
 							}
 						}
+					}
+					if (newReactions.isEmpty()) {
+						newMessageBuilder.reactions(Possible.absent())
+					} else {
 						newMessageBuilder.reactions(newReactions)
 					}
+					return@flatMap Mono.just(newMessageBuilder.build())
 				}
-				newMessageBuilder.build()
+				Mono.empty() // avoid writing when there are no changes
 			}
 			.flatMap { repos.messages.save(it, shardIndex) }
 	}
@@ -673,7 +679,12 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 					return@flatMap Mono.empty()
 				}
 
-				return@flatMap Mono.just(newMessageBuilder.reactions(newReactions).build())
+				if (newReactions.isEmpty()) {
+					newMessageBuilder.reactions(Possible.absent())
+				} else {
+					newMessageBuilder.reactions(newReactions)
+				}
+				return@flatMap Mono.just(newMessageBuilder.build())
 			}
 			.flatMap { repos.messages.save(it, shardIndex) }
 	}
