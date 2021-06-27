@@ -7,8 +7,13 @@ import org.junit.jupiter.api.Test
 
 internal class UserTest {
 
-	// TODO test more properties being updated
+	@Test
+	fun countUsers() {
+		assertThat(accessor.countUsers().blockOptional()).isPresent
+	}
 
+
+	// TODO test more properties being updated
 	@Test
 	fun onUserUpdate_updateName() {
 		val guildId = generateUniqueSnowflakeId()

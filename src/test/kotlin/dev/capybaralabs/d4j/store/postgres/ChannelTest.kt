@@ -12,6 +12,12 @@ import org.junit.jupiter.api.Test
 internal class ChannelTest {
 
 	@Test
+	fun countChannels() {
+		assertThat(accessor.countChannels().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun onChannelCreate_createChannel() {
 		val channelId = generateUniqueSnowflakeId()
 

@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test
 internal class MessageTest {
 
 	@Test
+	fun countMessages() {
+		assertThat(accessor.countMessages().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun onMessageCreate_createMessage() {
 		val channelId = generateUniqueSnowflakeId()
 		val messageId = generateUniqueSnowflakeId()

@@ -10,6 +10,12 @@ import org.junit.jupiter.api.Test
 internal class GuildTest {
 
 	@Test
+	fun countGuilds() {
+		assertThat(accessor.countGuilds().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun onGuildCreate_createGuild() {
 		val guildId = generateUniqueSnowflakeId()
 		val guildCreate = GuildCreate.builder()

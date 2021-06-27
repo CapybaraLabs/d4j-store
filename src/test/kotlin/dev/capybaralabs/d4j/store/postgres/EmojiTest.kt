@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test
 internal class EmojiTest {
 
     @Test
+    fun countEmojis() {
+        assertThat(accessor.countEmojis().blockOptional()).isPresent
+    }
+
+
+    @Test
     fun onGuildEmojisUpdate_addEmoji() {
         val guildId = generateUniqueSnowflakeId()
         val emojiIdA = generateUniqueSnowflakeId()

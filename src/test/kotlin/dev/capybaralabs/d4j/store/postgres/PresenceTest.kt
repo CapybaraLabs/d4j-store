@@ -9,6 +9,12 @@ import org.junit.jupiter.api.Test
 
 internal class PresenceTest {
 
+	@Test
+	fun countPresences() {
+		assertThat(accessor.countPresences().blockOptional()).isPresent
+	}
+
+
 	// TODO update more presence properties
 	@Test
 	fun onPresenceUpdate_updatePresenceStatus() {

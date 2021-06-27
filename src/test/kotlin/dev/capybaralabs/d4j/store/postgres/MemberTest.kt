@@ -13,6 +13,12 @@ import org.junit.jupiter.api.Test
 internal class MemberTest {
 
 	@Test
+	fun countMembers() {
+		assertThat(accessor.countMembers().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun onGuildMemberAdd_createMember() {
 		val guildId = generateUniqueSnowflakeId()
 		val userId = generateUniqueSnowflakeId()

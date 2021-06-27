@@ -10,6 +10,12 @@ import org.junit.jupiter.api.Test
 internal class RoleTest {
 
 	@Test
+	fun countRoles() {
+		assertThat(accessor.countRoles().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun onGuildRoleCreate_createRole() {
 		val guildId = generateUniqueSnowflakeId()
 		val roleId = generateUniqueSnowflakeId()

@@ -7,6 +7,12 @@ import org.junit.jupiter.api.Test
 internal class VoiceStateTest {
 
 	@Test
+	fun countVoiceStates() {
+		assertThat(accessor.countVoiceStates().blockOptional()).isPresent
+	}
+
+
+	@Test
 	fun whenJoiningChannel_onVoiceStateUpdate_createVoiceState() {
 		val guildId = generateUniqueSnowflakeId()
 		val channelIdA = generateUniqueSnowflakeId()
