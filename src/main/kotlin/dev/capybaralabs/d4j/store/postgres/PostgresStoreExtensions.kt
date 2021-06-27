@@ -73,11 +73,6 @@ internal fun <E> Publisher<out Result>.deserializeOneFromData(clazz: Class<E>, s
 
 
 /**
- * Transform an Optional into a Possible
- */
-internal fun <T> Optional<T>.toPossible(): Possible<T> = map { Possible.of(it) }.orElse(Possible.absent())
-
-/**
  * Collapse a nested Possible<Optional<>> into a Possible
  */
 internal fun <T> Possible<Optional<T>>.collapse(): Possible<T> =

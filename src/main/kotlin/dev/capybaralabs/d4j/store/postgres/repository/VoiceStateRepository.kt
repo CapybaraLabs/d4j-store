@@ -38,7 +38,7 @@ internal class VoiceStateRepository(private val factory: ConnectionFactory, priv
 
 	fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
 		val channelId = voiceState.channelId()
-		if (channelId.isEmpty) {// TODO is this fine?
+		if (channelId.isEmpty) {
 			return Mono.empty()
 		}
 

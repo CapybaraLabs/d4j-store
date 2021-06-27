@@ -75,6 +75,11 @@ internal fun emoji(emojiId: Long): ImmutableEmojiData.Builder {
 		.id(emojiId)
 }
 
+internal fun unicodeEmoji(name: String): ImmutableEmojiData.Builder {
+	return EmojiData.builder()
+		.name(name)
+}
+
 internal fun guild(guildId: Long): ImmutableGuildCreateData.Builder {
 	return GuildCreateData.builder()
 		.id(guildId)

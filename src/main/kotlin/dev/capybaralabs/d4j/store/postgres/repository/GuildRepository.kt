@@ -61,17 +61,17 @@ internal class GuildRepository(private val factory: ConnectionFactory, private v
 		}
 	}
 
-	fun removeChannel(channelId: Long, guildId: Long): Mono<Int> {
-		// TODO: broken in postgres, cannot remove numeric entries from array. might need more complicated sql logic, or some other crap like fetching, editing, saving
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement("UPDATE d4j_discord_guild SET data = jsonb_set(data, '{channels}', (data -> 'channels') - $1::TEXT) WHERE guild_id = $2")
-					.bind("$1", channelId)
-					.bind("$2", guildId)
-					.executeConsumingSingle()
-			}
-		}
-	}
+//	fun removeChannel(channelId: Long, guildId: Long): Mono<Int> {
+//		// TODO: broken in postgres, cannot remove numeric entries from array. might need more complicated sql logic, or some other crap like fetching, editing, saving
+//		return Mono.defer {
+//			withConnection(factory) {
+//				it.createStatement("UPDATE d4j_discord_guild SET data = jsonb_set(data, '{channels}', (data -> 'channels') - $1::TEXT) WHERE guild_id = $2")
+//					.bind("$1", channelId)
+//					.bind("$2", guildId)
+//					.executeConsumingSingle()
+//			}
+//		}
+//	}
 
 	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {

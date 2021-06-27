@@ -116,6 +116,36 @@ internal class GuildTest {
 	}
 
 	@Test
+	fun onGuildCreate_silentlyDropEmojisWithoutId() {
+		val guildId = generateUniqueSnowflakeId()
+		val emojiId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.addEmojis(
+						emoji(emojiId).build(),
+						unicodeEmoji("🖖").build(),
+					)
+					.build()
+			)
+			.build()
+		updater.onGuildCreate(0, guildCreate).block()
+
+
+		assertThat(accessor.getEmojiById(guildId, emojiId).block())
+			.matches { it.id().get().asLong() == emojiId }
+
+		val count = accessor.countEmojisInGuild(guildId).block()!!
+		assertThat(count).isEqualTo(1)
+
+		assertThat(accessor.getGuildById(guildId).block()!!.emojis()).hasSize(1)
+		assertThat(accessor.getEmojisInGuild(guildId).collectList().block())
+			.hasSize(1)
+			.anyMatch { it.id().get().asLong() == emojiId }
+	}
+
+
+	@Test
 	fun onGuildCreate_createMembers() {
 		val guildId = generateUniqueSnowflakeId()
 		val userIdA = generateUniqueSnowflakeId()
@@ -319,8 +349,6 @@ internal class GuildTest {
 			.anyMatch { it.id().asLong() == userIdB }
 	}
 
-	// TODO do not create voice states without a channel
-
 	@Test
 	fun onGuildCreate_createVoiceStates() {
 		val guildId = generateUniqueSnowflakeId()
@@ -387,6 +415,60 @@ internal class GuildTest {
 			.anyMatch(isVoiceState(guildId, channelIdB, userIdB))
 			.anyMatch(isVoiceState(guildId, channelIdB, userIdC))
 	}
+
+	@Test
+	fun onGuildCreate_silentlyDropVoiceStatesWithoutChannelId() {
+		val guildId = generateUniqueSnowflakeId()
+		val channelIdA = generateUniqueSnowflakeId()
+		val channelIdB = generateUniqueSnowflakeId()
+		val userIdA = generateUniqueSnowflakeId()
+		val userIdB = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.addChannels(
+						channel(channelIdA).build(),
+						channel(channelIdB).build(),
+					)
+					.addVoiceStates(
+						voiceStateInChannel(guildId, channelIdA, userIdA).build(),
+						voiceStateNoChannel(guildId, userIdB).build(),
+					)
+					.build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+
+		val voiceStateA = accessor.getVoiceStateById(guildId, userIdA).block()!!
+		assertThat(voiceStateA.guildId().get().asLong()).isEqualTo(guildId)
+		assertThat(voiceStateA.channelId().get().asLong()).isEqualTo(channelIdA)
+		assertThat(voiceStateA.userId().asLong()).isEqualTo(userIdA)
+
+		assertThat(accessor.getVoiceStateById(guildId, userIdB).block()).isNull()
+		assertThat(accessor.countVoiceStatesInGuild(guildId).block()!!).isEqualTo(1)
+		assertThat(accessor.countVoiceStatesInChannel(guildId, channelIdA).block()!!).isEqualTo(1)
+		assertThat(accessor.countVoiceStatesInChannel(guildId, channelIdB).block()!!).isEqualTo(0)
+
+		assertThat(accessor.getVoiceStatesInGuild(guildId).collectList().block())
+			.hasSize(1)
+			.anyMatch(isVoiceState(guildId, channelIdA, userIdA))
+			.noneMatch(isVoiceState(guildId, channelIdB, userIdB))
+
+		assertThat(accessor.getVoiceStatesInChannel(guildId, channelIdA).collectList().block())
+			.hasSize(1)
+			.anyMatch(isVoiceState(guildId, channelIdA, userIdA))
+
+		assertThat(accessor.getVoiceStatesInChannel(guildId, channelIdB).collectList().block())
+			.hasSize(0)
+			.noneMatch(isVoiceState(guildId, channelIdB, userIdB))
+
+		assertThat(accessor.voiceStates.collectList().block())
+			.anyMatch(isVoiceState(guildId, channelIdA, userIdA))
+			.noneMatch(isVoiceState(guildId, channelIdB, userIdB))
+	}
+
 
 	@Test
 	fun onGuildDelete_deleteGuild() {

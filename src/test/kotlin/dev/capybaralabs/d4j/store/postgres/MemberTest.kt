@@ -69,6 +69,7 @@ internal class MemberTest {
 
 
 		assertThat(accessor.countMembersInGuild(guildId).block()!!).isEqualTo(2)
+		assertThat(accessor.countExactMembersInGuild(guildId).block()!!).isEqualTo(2)
 		assertThat(accessor.getGuildById(guildId).block()!!.members())
 			.hasSize(2)
 			.anyMatch { it.asLong() == userIdA }
@@ -163,6 +164,7 @@ internal class MemberTest {
 		removeMember(guildId, userIdB)
 
 		assertThat(accessor.countMembersInGuild(guildId).block()!!).isEqualTo(1)
+		assertThat(accessor.countExactMembersInGuild(guildId).block()!!).isEqualTo(1)
 		assertThat(accessor.getGuildById(guildId).block()!!.members())
 			.hasSize(1)
 			.anyMatch { it.asLong() == userIdA }
@@ -217,6 +219,7 @@ internal class MemberTest {
 		guildMembersChunk(guildId, userIdB, userIdC)
 
 		assertThat(accessor.countMembersInGuild(guildId).block()!!).isEqualTo(3)
+		assertThat(accessor.countExactMembersInGuild(guildId).block()!!).isEqualTo(3)
 		assertThat(accessor.getGuildById(guildId).block()!!.members())
 			.hasSize(3)
 			.anyMatch { it.asLong() == userIdA }

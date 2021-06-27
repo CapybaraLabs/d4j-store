@@ -37,7 +37,6 @@ internal class EmojiRepository(private val factory: ConnectionFactory, private v
 	fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
 		val id = emoji.id()
 		if (id.isEmpty) {
-			// TODO is this ok?
 			return Mono.empty()
 		}
 		return Mono.defer {
