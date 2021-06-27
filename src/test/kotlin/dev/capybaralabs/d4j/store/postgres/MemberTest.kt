@@ -268,7 +268,13 @@ internal class MemberTest {
 			.matches { it.user().id().asLong() == userId && it.nick().get().get() == "Neelix" }
 	}
 
-	// TODO onGuildMembersCompletion
+	@Test
+	fun onGuildMembersCompletion_doNothing() {
+		val guildId = generateUniqueSnowflakeId()
+
+		// ¯\_(ツ)_/¯
+		assertThat(updater.onGuildMembersCompletion(guildId).block()).isNull()
+	}
 
 
 	private fun createGuildWithMembers(guildId: Long, vararg userIds: Long) {

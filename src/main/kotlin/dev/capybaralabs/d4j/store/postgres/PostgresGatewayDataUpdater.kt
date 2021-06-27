@@ -790,7 +790,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onGuildMembersCompletion(guildId: Long): Mono<Void> {
-		// TODO needs implementation
 		return Mono.empty()
 	}
 }
