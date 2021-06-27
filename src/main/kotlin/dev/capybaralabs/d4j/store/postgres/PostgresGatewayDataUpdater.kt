@@ -557,21 +557,19 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onMessageReactionAdd(shardIndex: Int, dispatch: MessageReactionAdd): Mono<Void> {
-		val selfId = getSelfId()
-
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
 
 		// add reaction to message
 		return repos.messages.getMessageById(messageId)
 			.map { oldMessage ->
-				val isMe = userId == selfId
+				val isSelf = userId == getSelfId()
 				val newMessageBuilder = MessageData.builder().from(oldMessage)
 				if (oldMessage.reactions().isAbsent) {
 					newMessageBuilder.addReaction(
 						ReactionData.builder()
 							.count(1)
-							.me(isMe)
+							.me(isSelf)
 							.emoji(dispatch.emoji())
 							.build()
 					)
@@ -582,7 +580,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 						// message already has this reaction: bump 1
 						val newExisting = ReactionData.builder()
 							.from(oldExisting)
-							.me(oldExisting.me() || isMe)
+							.me(oldExisting.me() || isSelf)
 							.count(oldExisting.count() + 1)
 							.build()
 						val newReactions = reactions.toMutableList()
@@ -597,7 +595,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 						// message doesn't have this reaction: create
 						val reaction = ReactionData.builder()
 							.emoji(dispatch.emoji())
-							.me(isMe)
+							.me(isSelf)
 							.count(1)
 							.build()
 						newMessageBuilder.reactions(reactions.toList() + reaction)
@@ -609,8 +607,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onMessageReactionRemove(shardIndex: Int, dispatch: MessageReactionRemove): Mono<Void> {
-		val selfId = getSelfId()
-
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
 
@@ -618,7 +614,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		return repos.messages.getMessageById(messageId)
 			.filter { message -> !message.reactions().isAbsent }
 			.map { oldMessage: MessageData ->
-				val me = userId == selfId
+				val isSelf = userId == getSelfId()
 				val newMessageBuilder = MessageData.builder().from(oldMessage)
 				val reactions = oldMessage.reactions().get()
 
@@ -630,7 +626,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 						val newExisting = ReactionData.builder()
 							.from(existing)
 							.count(existing.count() - 1)
-							.me(!me && existing.me())
+							.me(!isSelf && existing.me())
 							.build()
 						val newReactions = reactions.toMutableList()
 						newReactions.replaceAll {
