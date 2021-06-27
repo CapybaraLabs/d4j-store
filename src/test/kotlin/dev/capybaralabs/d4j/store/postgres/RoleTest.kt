@@ -93,6 +93,30 @@ internal class RoleTest {
 	}
 
 	@Test
+	fun givenRoleNotExists_onGuildRoleDelete_removeFromMembers() {
+		val guildId = generateUniqueSnowflakeId()
+		val roleId = generateUniqueSnowflakeId()
+		val userId = generateUniqueSnowflakeId()
+
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.addMembers(member(userId).addRole(roleId).build())
+					.build()
+			)
+			.build()
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getMemberById(guildId, userId).block()!!.roles())
+			.anyMatch { it.asLong() == roleId }
+
+		deleteRole(guildId, roleId)
+
+		assertThat(accessor.getMemberById(guildId, userId).block()!!.roles())
+			.noneMatch { it.asLong() == roleId }
+	}
+
+	@Test
 	fun onGuildRoleDelete_removeFromGuild() {
 		val guildId = generateUniqueSnowflakeId()
 		val roleIdA = generateUniqueSnowflakeId()

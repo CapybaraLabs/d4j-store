@@ -314,13 +314,14 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.map {
 				GuildData.builder()
 					.from(it)
-					.members(it.members().toList() - userData.id())  // TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
+					// TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
+					.members(it.members().toList() - userData.id())
 					.memberCount(it.memberCount() - 1)
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardIndex) }
 
-		val member = repos.members.getMemberById(guildId, userId)
+		val getMember = repos.members.getMemberById(guildId, userId)
 		val deleteMember = repos.members.deleteById(guildId, userId)
 		val deletePresence = repos.presences.deleteById(guildId, userId)
 
@@ -334,7 +335,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 
 		val deletions = Mono.`when`(removeMemberId, deleteMember, deletePresence, deleteOrphanUser)
 
-		return member
+		return getMember
 			.flatMap { deletions.thenReturn(it) }
 			.switchIfEmpty(deletions.then(Mono.empty()))
 	}
@@ -417,6 +418,8 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		val guildId = dispatch.guildId().asLong()
 		val roleId = dispatch.roleId().asLong()
 
+		val getRole = repos.roles.getRoleById(roleId)
+
 		val removeRoleId = repos.guilds.getGuildById(guildId)
 			.map { guild ->
 				GuildData.builder()
@@ -444,10 +447,11 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.flatMap { repos.members.save(guildId, it, shardIndex) }
 			.then()
 
-		return repos.roles.getRoleById(roleId)
-			.flatMap { removeRoleId.thenReturn(it) }
-			.flatMap { deleteRole.thenReturn(it) }
-			.flatMap { removeRoleFromMembers.thenReturn(it) } // TODO consider what happens if the role is not found
+		val deletions = Mono.`when`(removeRoleId, deleteRole, removeRoleFromMembers)
+
+		return getRole
+			.flatMap { deletions.thenReturn(it) }
+			.switchIfEmpty(deletions.then(Mono.empty()))
 	}
 
 	override fun onGuildRoleUpdate(shardIndex: Int, dispatch: GuildRoleUpdate): Mono<RoleData?> {
