@@ -1,4 +1,4 @@
-# D4J Postgres Store [![Release](https://jitpack.io/v/dev.capybaralabs/d4j-postgres-store.svg?style=flat-square)](https://jitpack.io/#dev.capybaralabs/d4j-postgres-store) [![Coverage](https://img.shields.io/sonar/coverage/dev.capybaralabs.d4j.store.postgres:d4j-postgres-store?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/dashboard?id=dev.capybaralabs.d4j.store.postgres%3Ad4j-postgres-store)
+# D4J Postgres Store [![Release](https://jitpack.io/v/dev.capybaralabs/d4j-postgres-store.svg?style=flat-square)](https://jitpack.io/#dev.capybaralabs/d4j-postgres-store) [![Coverage](https://img.shields.io/sonar/coverage/dev.capybaralabs.d4j.store.postgres:d4j-postgres-store?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/summary/overall?id=dev.capybaralabs.d4j.store.postgres%3Ad4j-postgres-store)
 
 An implementation of
 the [Discord4J Store](https://github.com/Discord4J/Discord4J/tree/master/common/src/main/java/discord4j/common/store/api/layout)
