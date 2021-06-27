@@ -8,7 +8,6 @@ import discord4j.discordjson.Id
 import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.EmojiData
-import discord4j.discordjson.json.GuildCreateData
 import discord4j.discordjson.json.GuildData
 import discord4j.discordjson.json.MemberData
 import discord4j.discordjson.json.MessageData
@@ -130,34 +129,14 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 
 
 	override fun onGuildCreate(shardIndex: Int, dispatch: GuildCreate): Mono<Void> {
-		val createData: GuildCreateData
-		val guild: GuildData
-		// TODO is there a better solution to this?
-		if (dispatch.guild().large()) {
-			// Solves https://github.com/Discord4J/Discord4J/issues/429
-			// Member store cannot have duplicates because keys cannot
-			// be duplicated, but array addition in GuildBean can
-			//guildBean.setMembers(new long[0]);
-			createData = GuildCreateData.builder()
-				.from(dispatch.guild())
-				.members(emptyList())
-				.build()
-			guild = GuildData.builder()
-				.from(createData)
-				.roles(createData.roles().map { it.id() })
-				.emojis(createData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
-				.channels(createData.channels().map { it.id() })
-				.build()
-		} else {
-			createData = dispatch.guild()
-			guild = GuildData.builder()
-				.from(createData)
-				.roles(createData.roles().map { it.id() })
-				.emojis(createData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
-				.members(createData.members().map { it.user().id() }.distinct())
-				.channels(createData.channels().map { it.id() })
-				.build()
-		}
+		val createData = dispatch.guild()
+		val guild = GuildData.builder()
+			.from(createData)
+			.roles(createData.roles().map { it.id() })
+			.emojis(createData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
+			.members(createData.members().map { it.user().id() }.distinct())
+			.channels(createData.channels().map { it.id() })
+			.build()
 		val guildId = guild.id().asLong()
 
 		// TODO consider bulk insert methods

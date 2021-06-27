@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.discordjson.json.gateway.GuildCreate
+import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildUpdate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.possible.Possible
@@ -749,5 +750,40 @@ internal class GuildTest {
 			.matches { it.name() == "Terok Nor" }
 	}
 
-	// TODO test roles+members
+	// https://github.com/Discord4J/Discord4J/issues/429
+	@Test
+	fun afterChunkingLargeGuild_noDuplicateMembers() {
+		val guildId = generateUniqueSnowflakeId()
+		val userIdA = generateUniqueSnowflakeId()
+		val userIdB = generateUniqueSnowflakeId()
+
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.large(true)
+					.addMembers(
+						member(userIdA).build(),
+					)
+					.build()
+			)
+			.build()
+		updater.onGuildCreate(0, guildCreate).block()
+
+		val guildMembersChunk = GuildMembersChunk.builder()
+			.guildId(guildId)
+			.chunkIndex(0)
+			.chunkCount(1)
+			.addMembers(
+				member(userIdA).build(),
+				member(userIdB).build(),
+			)
+			.build()
+		updater.onGuildMembersChunk(0, guildMembersChunk).block()
+
+
+		assertThat(accessor.getMembersInGuild(guildId).collectList().block())
+			.hasSize(2)
+			.anyMatch { it.user().id().asLong() == userIdA }
+			.anyMatch { it.user().id().asLong() == userIdB }
+	}
 }
