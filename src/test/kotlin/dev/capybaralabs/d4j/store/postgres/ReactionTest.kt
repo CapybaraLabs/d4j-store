@@ -10,11 +10,29 @@ import discord4j.discordjson.json.gateway.MessageReactionRemoveAll
 import discord4j.discordjson.json.gateway.MessageReactionRemoveEmoji
 import discord4j.discordjson.json.gateway.Ready
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.parallel.Isolated
 
 @Isolated("use of onReady global state")
+@TestMethodOrder(value = OrderAnnotation::class)
 internal class ReactionTest {
+
+	@Test
+	@Order(1)
+	fun givenNoReady_onMessageReactionAdd_throw() {
+		val channelId = generateUniqueSnowflakeId()
+		val messageId = generateUniqueSnowflakeId()
+		val emojiId = generateUniqueSnowflakeId()
+		val userId = generateUniqueSnowflakeId()
+		createMessage(channelId, messageId)
+
+		assertThatThrownBy { addReaction(channelId, messageId, emoji(emojiId).build(), userId) }
+			.isInstanceOf(IllegalStateException::class.java)
+	}
 
 	// onMessageReactionAdd
 	@Test
