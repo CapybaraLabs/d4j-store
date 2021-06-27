@@ -23,7 +23,7 @@ internal class GuildTest {
 			.guild(guild(guildId).build())
 			.build()
 
-		updater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).block()
 
 
 		val guild = accessor.getGuildById(guildId).block()!!
@@ -479,7 +479,7 @@ internal class GuildTest {
 			.build()
 
 
-		updater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).block()
 
 		assertThat(accessor.getGuildById(guildId).block()).isNotNull
 		assertThat(accessor.guilds.collectList().block()).anyMatch { it.id().asLong() == guildId }
@@ -732,7 +732,7 @@ internal class GuildTest {
 			)
 			.build()
 
-		updater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).block()
 
 		assertThat(accessor.getGuildById(guildId).block())
 			.matches { it.id().asLong() == guildId }

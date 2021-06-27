@@ -46,7 +46,7 @@ internal class ChannelTest {
 		val guildCreate = GuildCreate.builder()
 			.guild(guild(guildId).build())
 			.build()
-		updater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).block()
 
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
 		updater.onChannelCreate(0, channelCreate.build()).block()
@@ -87,7 +87,7 @@ internal class ChannelTest {
 		val guildCreate = GuildCreate.builder()
 			.guild(guild(guildId).build())
 			.build()
-		updater.onGuildCreate(0, guildCreate).blockOptional()
+		updater.onGuildCreate(0, guildCreate).block()
 
 		val channelCreate = ChannelCreate.builder().channel(channel(channelId).guildId(guildId).build())
 		updater.onChannelCreate(0, channelCreate.build()).block()
