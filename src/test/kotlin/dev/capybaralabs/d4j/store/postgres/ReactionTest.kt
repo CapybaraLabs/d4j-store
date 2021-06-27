@@ -34,6 +34,24 @@ internal class ReactionTest {
 			.isInstanceOf(IllegalStateException::class.java)
 	}
 
+	// TODO find better way to order tests using onReady
+	@Test
+	fun onReady_createSelfUser() {
+		val selfId = generateUniqueSnowflakeId()
+
+		val ready = Ready.builder()
+			.user(user(selfId).username("Benjamin Sisko").build())
+			.v(42)
+			.sessionId("Season 1")
+			.application(PartialApplicationInfoData.builder().id(selfId.toString()).build())
+			.build()
+		updater.onReady(ready).block()
+
+		assertThat(accessor.getUserById(selfId).block())
+			.matches { it.id().asLong() == selfId && it.username() == "Benjamin Sisko" }
+	}
+
+
 	// onMessageReactionAdd
 	@Test
 	fun givenMessageWithoutReactions_onMessageReactionAdd_createReaction() {

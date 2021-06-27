@@ -2,13 +2,11 @@ package dev.capybaralabs.d4j.store.postgres
 
 import discord4j.common.store.api.`object`.InvalidationCause
 import discord4j.discordjson.json.ClientStatusData
-import discord4j.discordjson.json.PartialApplicationInfoData
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.GuildRoleCreate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.json.gateway.PresenceUpdate
-import discord4j.discordjson.json.gateway.Ready
 import discord4j.discordjson.json.gateway.VoiceStateUpdateDispatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -17,23 +15,6 @@ import org.junit.jupiter.api.Test
  * Make sure the shardIds used here are isolated from the rest of the test suite, so we don't delete their data accidentally
  */
 internal class ShardTest {
-
-	@Test
-	fun onReady_createSelfUser() {
-		val selfId = generateUniqueSnowflakeId()
-
-		val ready = Ready.builder()
-			.user(user(selfId).username("Benjamin Sisko").build())
-			.v(42)
-			.sessionId("Season 1")
-			.application(PartialApplicationInfoData.builder().id(selfId.toString()).build())
-			.build()
-		updater.onReady(ready).block()
-
-		assertThat(accessor.getUserById(selfId).block())
-			.matches { it.id().asLong() == selfId && it.username() == "Benjamin Sisko" }
-	}
-
 
 	@Test
 	fun onShardInvalidation_deleteChannelsOnThisShard() {
