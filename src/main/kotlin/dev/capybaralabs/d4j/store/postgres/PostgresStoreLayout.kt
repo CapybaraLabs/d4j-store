@@ -49,6 +49,7 @@ class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
 	// TODO implement versioning / migrations
 	// TODO avoid blocking calls (db creations) in constructor?
 	private val repositories = Repositories(
+		connectionFactory,
 		ChannelRepository(connectionFactory, serde),
 		EmojiRepository(connectionFactory, serde),
 		GuildRepository(connectionFactory, serde),

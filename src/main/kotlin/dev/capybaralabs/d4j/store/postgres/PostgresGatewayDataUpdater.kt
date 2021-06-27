@@ -494,32 +494,36 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onShardInvalidation(shardIndex: Int, cause: InvalidationCause): Mono<Void> {
-		return Flux.fromIterable(
-			listOf(
-				repos.channels.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it channels on shard $shardIndex") },
-				repos.emojis.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it emojis on shard $shardIndex") },
-				repos.guilds.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it guilds on shard $shardIndex") },
-				repos.members.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it members on shard $shardIndex") },
-				// TODO message cache is probably safe to be kept and should follow different kinds of cache rules
-				repos.messages.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it messages on shard $shardIndex") },
-				repos.presences.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it presences on shard $shardIndex") },
-				repos.roles.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it roles on shard $shardIndex") },
-				// TODO delete users by shard???
-//				repos.users.deleteByShardIndex(shardIndex)
-//					.doOnNext { log.debug("Invalidated $it users on shard $shardIndex") },
-				repos.voiceStates.deleteByShardIndex(shardIndex)
-					.doOnNext { log.debug("Invalidated $it voice states on shard $shardIndex") },
-			)
+		val deleteChannels = repos.channels.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it channels on shard $shardIndex") }
+		val deleteEmojis = repos.emojis.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it emojis on shard $shardIndex") }
+		val deleteGuilds = repos.guilds.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it guilds on shard $shardIndex") }
+		val deleteMembers = repos.members.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it members on shard $shardIndex") }
+		val deleteOrphanedUsers = repos.deleteOrphanedUsers(shardIndex)
+		// TODO message cache is probably safe to be kept and should follow different kinds of cache rules
+		val deleteMessages = repos.messages.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it messages on shard $shardIndex") }
+		val deletePresenses = repos.presences.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it presences on shard $shardIndex") }
+		val deleteRoles = repos.roles.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it roles on shard $shardIndex") }
+		val deleteVoiceStates = repos.voiceStates.deleteByShardIndex(shardIndex)
+			.doOnNext { log.debug("Invalidated $it voice states on shard $shardIndex") }
+
+
+		return Mono.`when`(
+			deleteChannels,
+			deleteEmojis,
+			deleteGuilds,
+			deleteOrphanedUsers.then(deleteMembers),
+			deleteMessages,
+			deletePresenses,
+			deleteRoles,
+			deleteVoiceStates
 		)
-			.flatMap { it }
-			.then()
 	}
 
 	override fun onMessageCreate(shardIndex: Int, dispatch: MessageCreate): Mono<Void> {

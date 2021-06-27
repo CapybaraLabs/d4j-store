@@ -34,7 +34,6 @@ internal class ShardTest {
 			.matches { it.id().asLong() == selfId && it.username() == "Benjamin Sisko" }
 	}
 
-	// TODO onShardInvalidation
 
 	@Test
 	fun onShardInvalidation_deleteChannelsOnThisShard() {
@@ -308,10 +307,36 @@ internal class ShardTest {
 			.anyMatch(isVoiceState(guildId, channelId, userId))
 	}
 
-	// TODO
-//	@Test
-//	fun onShardInvalidation_deleteOrphanedUsers() {
-//	}
+	@Test
+	fun onShardInvalidation_deleteOrphanedUsers() {
+		val guildIdA = generateUniqueSnowflakeId()
+		val guildIdB = generateUniqueSnowflakeId()
+		val userIdA = generateUniqueSnowflakeId()
+		val userIdB = generateUniqueSnowflakeId()
+		val guildCreateA = GuildCreate.builder()
+			.guild(
+				guild(guildIdA).addMembers(
+					member(userIdA).build(),
+					member(userIdB).build(),
+				).build()
+			).build()
+		updater.onGuildCreate(900, guildCreateA).block()
+		val guildCreateB = GuildCreate.builder()
+			.guild(
+				guild(guildIdB).addMembers(
+					member(userIdB).build(),
+				).build()
+			).build()
+		updater.onGuildCreate(901, guildCreateB).block()
+
+		assertThat(accessor.getUserById(userIdA).block()).isNotNull
+		assertThat(accessor.getUserById(userIdB).block()).isNotNull
+
+		updater.onShardInvalidation(900, InvalidationCause.LOGOUT).block()
+
+		assertThat(accessor.getUserById(userIdA).block()).isNull()
+		assertThat(accessor.getUserById(userIdB).block()).isNotNull
+	}
 
 	private fun createChannel(shardIndex: Int, channelId: Long) {
 		val channelCreate = ChannelCreate.builder()
