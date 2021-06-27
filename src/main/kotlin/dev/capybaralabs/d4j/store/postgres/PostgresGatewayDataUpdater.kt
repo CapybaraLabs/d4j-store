@@ -45,9 +45,11 @@ import discord4j.discordjson.json.gateway.UserUpdate
 import discord4j.discordjson.json.gateway.VoiceStateUpdateDispatch
 import discord4j.discordjson.possible.Possible
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicReference
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+
 
 /**
  * TODO
@@ -67,6 +69,8 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	companion object {
 		private val log = LoggerFactory.getLogger(PostgresGatewayDataUpdater::class.java)
 	}
+
+	private val selfUser = AtomicReference<UserData?>()
 
 
 	override fun onChannelCreate(shardIndex: Int, dispatch: ChannelCreate): Mono<Void> {
@@ -553,7 +557,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onMessageReactionAdd(shardIndex: Int, dispatch: MessageReactionAdd): Mono<Void> {
-		val selfId = 0L // TODO include selfId as parameter
+		val selfId = getSelfId()
 
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
@@ -605,7 +609,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 	}
 
 	override fun onMessageReactionRemove(shardIndex: Int, dispatch: MessageReactionRemove): Mono<Void> {
-		val selfId = 0L // TODO include selfId as parameter
+		val selfId = getSelfId()
 
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
@@ -757,7 +761,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 
 	override fun onReady(dispatch: Ready): Mono<Void> {
 		val userData = dispatch.user()
-
+		this.selfUser.set(userData)
 		return repos.users.save(userData)
 	}
 
@@ -791,5 +795,10 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 
 	override fun onGuildMembersCompletion(guildId: Long): Mono<Void> {
 		return Mono.empty()
+	}
+
+	private fun getSelfId(): Long {
+		return this.selfUser.get()?.id()?.asLong()
+			?: throw IllegalStateException("No self user present, did we not receive onReady?")
 	}
 }
