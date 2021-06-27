@@ -161,5 +161,4 @@ internal class MessageRepository(private val factory: ConnectionFactory, private
 			}
 		}
 	}
-
 }

@@ -246,5 +246,4 @@ internal class EmojiTest {
             .anyMatch { it.id().get().asLong() == emojiIdB && it.name().get() == "emojiB" }
             .anyMatch { it.id().get().asLong() == emojiIdC && it.name().get() == "emojiC_updated" }
     }
-
 }

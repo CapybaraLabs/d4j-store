@@ -45,5 +45,4 @@ internal class UserTest {
 		assertThat(accessor.users.collectList().block())
 			.anyMatch { it.id().asLong() == userId && it.username() == "Locutus of Borg" }
 	}
-
 }

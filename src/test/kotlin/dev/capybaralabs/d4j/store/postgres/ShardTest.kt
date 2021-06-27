@@ -320,5 +320,4 @@ internal class ShardTest {
 
 		updater.onChannelCreate(shardIndex, channelCreate).block()
 	}
-
 }

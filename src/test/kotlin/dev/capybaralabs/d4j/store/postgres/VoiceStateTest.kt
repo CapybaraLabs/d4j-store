@@ -101,7 +101,6 @@ internal class VoiceStateTest {
 
 		assertThat(accessor.countVoiceStatesInGuild(guildId).block()!!)
 			.isEqualTo(1)
-
 	}
 
 	private fun joinVoiceChannel(guildId: Long, channelId: Long, userId: Long) {
@@ -117,5 +116,4 @@ internal class VoiceStateTest {
 			.build()
 		updater.onVoiceStateUpdateDispatch(0, voiceStateUpdate).block()
 	}
-
 }

@@ -161,5 +161,4 @@ internal class VoiceStateRepository(private val factory: ConnectionFactory, priv
 			}
 		}
 	}
-
 }

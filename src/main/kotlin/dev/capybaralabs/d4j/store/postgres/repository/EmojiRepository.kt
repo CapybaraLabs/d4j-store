@@ -126,5 +126,4 @@ internal class EmojiRepository(private val factory: ConnectionFactory, private v
 			}
 		}
 	}
-
 }

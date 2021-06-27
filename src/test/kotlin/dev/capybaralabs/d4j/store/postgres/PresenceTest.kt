@@ -104,7 +104,6 @@ internal class PresenceTest {
 
 		assertThat(accessor.getUserById(userId).block())
 			.matches { it.id().asLong() == userId && it.avatar().get() == "borg.png" }
-
 	}
 
 	private fun createUser(userData: UserData) {

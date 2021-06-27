@@ -394,7 +394,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.and(saveMembers)
 			.and(saveUsers)
 			.and(saveOfflinePresences)
-
 	}
 
 	override fun onGuildMemberUpdate(shardIndex: Int, dispatch: GuildMemberUpdate): Mono<MemberData> {
@@ -620,7 +619,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				newMessageBuilder.build()
 			}
 			.flatMap { repos.messages.save(it, shardIndex) }
-
 	}
 
 	override fun onMessageReactionRemove(shardIndex: Int, dispatch: MessageReactionRemove): Mono<Void> {
@@ -806,7 +804,6 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 		return repos.voiceStates.getVoiceStateById(guildId, userId)
 			.flatMap { saveNewOrRemove.thenReturn(it) }
 			.switchIfEmpty(saveNewOrRemove.then(Mono.empty()))
-
 	}
 
 	override fun onGuildMembersCompletion(guildId: Long): Mono<Void> {

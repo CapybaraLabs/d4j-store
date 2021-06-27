@@ -145,5 +145,4 @@ internal class MemberRepository(private val factory: ConnectionFactory, private 
 			}
 		}
 	}
-
 }

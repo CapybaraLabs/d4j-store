@@ -246,7 +246,6 @@ internal class GuildTest {
 		assertThat(accessor.presences.collectList().block())
 			.anyMatch { it.user().id().asLong() == userIdA && it.status() == "dnd" }
 			.anyMatch { it.user().id().asLong() == userIdB && it.status() == "offline" }
-
 	}
 
 	@Test

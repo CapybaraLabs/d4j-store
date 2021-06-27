@@ -116,7 +116,6 @@ internal class RoleTest {
 			.hasSize(1)
 			.noneMatch { it.id().asLong() == roleIdA }
 			.anyMatch { it.id().asLong() == roleIdB }
-
 	}
 
 	// TODO test more properties
