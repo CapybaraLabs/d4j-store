@@ -35,23 +35,33 @@ internal class EmojiRepository(private val factory: ConnectionFactory, private v
 	}
 
 	fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
-		val id = emoji.id()
-		if (id.isEmpty) {
-			return Mono.empty()
+		return saveAll(guildId, listOf(emoji), shardIndex).then()
+	}
+
+	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
+		val guildEmojis = emojis.filter { it.id().isPresent }
+		if (guildEmojis.isEmpty()) {
+			return Flux.empty()
 		}
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3::jsonb, $4)
 						ON CONFLICT (emoji_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-					.bind("$1", id.get().asLong())
-					.bind("$2", guildId)
-					.bind("$3", serde.serializeToString(emoji))
-					.bind("$4", shardIndex)
-					.executeConsumingSingle().then()
+
+				for (guildEmoji in guildEmojis) {
+					statement
+						.bind("$1", guildEmoji.id().get().asLong())
+						.bind("$2", guildId)
+						.bind("$3", serde.serializeToString(guildEmoji))
+						.bind("$4", shardIndex)
+						.add()
+				}
+				statement.executeConsuming()
 			}
 		}
 	}

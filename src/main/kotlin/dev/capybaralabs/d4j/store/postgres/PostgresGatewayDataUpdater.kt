@@ -143,22 +143,15 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			.build()
 		val guildId = guild.id().asLong()
 
-		// TODO consider bulk insert methods
-
 		val saveGuild = repos.guilds.save(guild, shardIndex)
 
-		val saveChannels = Flux.fromIterable(createData.channels())
+		val saveChannels = createData.channels()
 			.map { ChannelData.builder().from(it).guildId(guildId).build() }
-			.flatMap { repos.channels.save(it, shardIndex) }
+			.let { repos.channels.saveAll(it, shardIndex) }
 
-		val saveEmojis = Flux.fromIterable(createData.emojis())
-			.flatMap { repos.emojis.save(guildId, it, shardIndex) }
-
-		val saveMembers = Flux.fromIterable(createData.members())
-			.flatMap { repos.members.save(guildId, it, shardIndex) }
-
-		val savePresences = Flux.fromIterable(createData.presences())
-			.flatMap { repos.presences.save(guildId, it, shardIndex) }
+		val saveEmojis = createData.emojis().let { repos.emojis.saveAll(guildId, it, shardIndex) }
+		val saveMembers = createData.members().let { repos.members.saveAll(guildId, it, shardIndex) }
+		val savePresences = createData.presences().let { repos.presences.saveAll(guildId, it, shardIndex) }
 
 		// TODO why? addGuildMember does not create any presences
 		val saveOfflinePresences = Flux.fromIterable(createData.members())
@@ -166,19 +159,16 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())
 					.hasElement().map { !it }
 			}
+			// TODO add bulk operations
 			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
 			.then()
 
-		val saveRoles = Flux.fromIterable(createData.roles())
-			.flatMap { repos.roles.save(guildId, it, shardIndex) }
+		val saveRoles = createData.roles().let { repos.roles.saveAll(guildId, it, shardIndex) }
+		val saveUsers = createData.members().map { it.user() }.let { repos.users.saveAll(it) }
 
-		val saveUsers = Flux.fromIterable(createData.members())
-			.map { it.user() }
-			.flatMap { repos.users.save(it) }
-
-		val saveVoiceStates = Flux.fromIterable(createData.voiceStates())
+		val saveVoiceStates = createData.voiceStates()
 			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
-			.flatMap { repos.voiceStates.save(it, shardIndex) }
+			.let { repos.voiceStates.saveAll(it, shardIndex) }
 
 		return saveGuild
 			.and(saveChannels)
@@ -268,8 +258,8 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			repos.emojis.deleteByIds(toDelete)
 		}
 
-		val saveEmojis = Flux.fromIterable(dispatch.emojis())
-			.flatMap { repos.emojis.save(guildId, it, shardIndex) } // TODO bulk operation
+		val saveEmojis = dispatch.emojis()
+			.let { repos.emojis.saveAll(guildId, it, shardIndex) }
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
@@ -358,12 +348,8 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 			}
 			.flatMap { repos.guilds.save(it, shardIndex) }
 
-		// TODO add bulk operations
-		val saveMembers = Flux.fromIterable(members)
-			.flatMap { repos.members.save(guildId, it, shardIndex) }
-
-		val saveUsers = Flux.fromIterable(members)
-			.flatMap { repos.users.save(it.user()) }
+		val saveMembers = members.let { repos.members.saveAll(guildId, it, shardIndex) }
+		val saveUsers = members.map { it.user() }.let { repos.users.saveAll(it) }
 
 		// TODO why? addGuildMember does not create any presences
 		val saveOfflinePresences = Flux.fromIterable(members)
@@ -371,6 +357,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				repos.presences.getPresenceById(guildId, member.user().id().asLong())
 					.hasElement().map { !it }
 			}
+			// TODO add bulk operations
 			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
 			.then()
 
@@ -440,6 +427,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 				Flux.fromIterable(guild.members())
 					.map { it.asLong() }
 			}
+			// TODO add bulk operation / granular update
 			.flatMap { repos.members.getMemberById(guildId, it) }
 			.filter { member -> member.roles().contains(dispatch.roleId()) }
 			.map { member ->
@@ -448,6 +436,7 @@ internal class PostgresGatewayDataUpdater(private val repos: Repositories) : Gat
 					.roles(member.roles().toList() - dispatch.roleId())
 					.build()
 			}
+			// TODO add bulk operation
 			.flatMap { repos.members.save(guildId, it, shardIndex) }
 			.then()
 

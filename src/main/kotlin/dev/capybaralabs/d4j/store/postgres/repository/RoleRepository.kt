@@ -36,19 +36,32 @@ internal class RoleRepository(private val factory: ConnectionFactory, private va
 	}
 
 	fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+		return saveAll(guildId, listOf(role), shardIndex).then()
+	}
+
+	fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Flux<Int> {
+		if (roles.isEmpty()) {
+			return Flux.empty()
+		}
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
 						ON CONFLICT (role_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-					.bind("$1", role.id().asLong())
-					.bind("$2", guildId)
-					.bind("$3", serde.serializeToString(role))
-					.bind("$4", shardIndex)
-					.executeConsumingSingle().then()
+
+				for (role in roles) {
+					statement
+						.bind("$1", role.id().asLong())
+						.bind("$2", guildId)
+						.bind("$3", serde.serializeToString(role))
+						.bind("$4", shardIndex)
+						.add()
+				}
+				statement.executeConsuming()
 			}
 		}
 	}

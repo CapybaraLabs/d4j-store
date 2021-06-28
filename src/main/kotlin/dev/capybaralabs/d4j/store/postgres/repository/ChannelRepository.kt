@@ -37,26 +37,40 @@ internal class ChannelRepository(private val factory: ConnectionFactory, private
 
 	fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
 		return Mono.defer {
-			withConnection(factory) { connection ->
+			saveAll(listOf(channel), shardIndex).then()
+		}
+	}
+
+	fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
+		if (channels.isEmpty()) {
+			return Flux.empty()
+		}
+		return Flux.defer {
+			withConnectionMany(factory) { connection ->
 				var statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3::jsonb, $4)
 						ON CONFLICT (channel_id) DO UPDATE SET guild_id = $2, data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-					.bind("$1", channel.id().asLong())
 
-				val guildId = channel.guildId().toOptional()
-				statement = if (guildId.isPresent) {
-					statement.bind("$2", guildId.get().asLong())
-				} else {
-					statement.bindNull("$2", java.lang.Long::class.java)
+				for (channel in channels) {
+					val guildId = channel.guildId().toOptional()
+
+					statement.bind("$1", channel.id().asLong())
+					statement = if (guildId.isPresent) {
+						statement.bind("$2", guildId.get().asLong())
+					} else {
+						statement.bindNull("$2", java.lang.Long::class.java)
+					}
+					statement
+						.bind("$3", serde.serializeToString(channel))
+						.bind("$4", shardIndex)
+
+					statement.add()
 				}
 
-				statement
-					.bind("$3", serde.serializeToString(channel))
-					.bind("$4", shardIndex)
-					.executeConsumingSingle().then()
+				statement.executeConsuming()
 			}
 		}
 	}

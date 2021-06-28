@@ -34,17 +34,29 @@ internal class UserRepository(private val factory: ConnectionFactory, private va
 	}
 
 	fun save(user: UserData): Mono<Void> {
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+		return saveAll(listOf(user)).then()
+	}
+
+	fun saveAll(users: List<UserData>): Flux<Int> {
+		if (users.isEmpty()) {
+			return Flux.empty()
+		}
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_user VALUES ($1, $2 ::jsonb)
 						ON CONFLICT (user_id) DO UPDATE SET data = $2::jsonb
 					""".trimIndent()
 				)
-					.bind("$1", user.id().asLong())
-					.bind("$2", serde.serializeToString(user))
-					.executeConsumingSingle().then()
+				for (user in users) {
+					statement
+						.bind("$1", user.id().asLong())
+						.bind("$2", serde.serializeToString(user))
+						.add()
+				}
+				statement.executeConsuming()
 			}
 		}
 	}

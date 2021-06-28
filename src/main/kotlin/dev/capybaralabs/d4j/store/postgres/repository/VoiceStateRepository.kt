@@ -37,27 +37,40 @@ internal class VoiceStateRepository(private val factory: ConnectionFactory, priv
 	}
 
 	fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
-		val channelId = voiceState.channelId()
-		if (channelId.isEmpty) {
-			return Mono.empty()
+		return saveAll(listOf(voiceState), shardIndex).then()
+	}
+
+	fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Flux<Int> {
+		if (voiceStates.isEmpty()) {
+			return Flux.empty()
 		}
 
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent }
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4::jsonb, $5)
 						ON CONFLICT (user_id, channel_id) DO UPDATE SET guild_id = $3, data = $4::jsonb, shard_index = $5
 					""".trimIndent()
 				)
-					.bind("$1", voiceState.userId().asLong())
-					.bind("$2", channelId.get().asLong())
-					.bind("$3", voiceState.guildId().get().asLong()) // TODO check if present or pass as param
-					.bind("$4", serde.serializeToString(voiceState))
-					.bind("$5", shardIndex)
-					.executeConsumingSingle().then()
+
+				for (voiceState in voiceStatesInChannels) {
+					statement
+						.bind("$1", voiceState.userId().asLong())
+						.bind("$2", voiceState.channelId().get().asLong())
+						.bind("$3", voiceState.guildId().get().asLong()) // TODO check if present or pass as param
+						.bind("$4", serde.serializeToString(voiceState))
+						.bind("$5", shardIndex)
+						.add()
+				}
+
+				statement.executeConsuming()
 			}
 		}
+
+		// TODO consider deleting those that are not in a channel?
 	}
 
 	fun deleteById(guildId: Long, userId: Long): Mono<Int> {

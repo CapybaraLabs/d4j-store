@@ -35,24 +35,39 @@ internal class MemberRepository(private val factory: ConnectionFactory, private 
 		}.blockLast()
 	}
 
-	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+		return saveAll(guildId, listOf(member), shardIndex).then()
+	}
+
+	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
+	fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Flux<Int> {
+		if (members.isEmpty()) {
+			return Flux.empty()
+		}
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_member VALUES ($1, $2, $3::jsonb, $4)
 						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-					.bind("$1", member.user().id().asLong())
-					.bind("$2", guildId)
-					.bind("$3", serde.serializeToString(member))
-					.bind("$4", shardIndex)
-					.executeConsumingSingle().then()
+
+				for (member in members) {
+					statement
+						.bind("$1", member.user().id().asLong())
+						.bind("$2", guildId)
+						.bind("$3", serde.serializeToString(member))
+						.bind("$4", shardIndex)
+						.add()
+				}
+
+				statement.executeConsuming()
 			}
 		}
 	}
+
 
 	fun deleteById(guildId: Long, userId: Long): Mono<Int> {
 		return Mono.defer {

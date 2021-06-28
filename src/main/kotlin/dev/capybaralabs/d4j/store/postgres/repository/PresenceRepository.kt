@@ -34,21 +34,34 @@ internal class PresenceRepository(private val factory: ConnectionFactory, privat
 		}.blockLast()
 	}
 
-	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
-		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+		return saveAll(guildId, listOf(presence), shardIndex).then()
+	}
+
+	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
+	fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
+		if (presences.isEmpty()) {
+			return Flux.empty()
+		}
+
+		return Flux.defer {
+			withConnectionMany(factory) {
+				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3::jsonb, $4)
 						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-					.bind("$1", presence.user().id().asLong())
-					.bind("$2", guildId)
-					.bind("$3", serde.serializeToString(presence))
-					.bind("$4", shardIndex)
-					.executeConsumingSingle().then()
+				for (presence in presences) {
+					statement
+						.bind("$1", presence.user().id().asLong())
+						.bind("$2", guildId)
+						.bind("$3", serde.serializeToString(presence))
+						.bind("$4", shardIndex)
+						.add()
+				}
+
+				statement.executeConsuming()
 			}
 		}
 	}
