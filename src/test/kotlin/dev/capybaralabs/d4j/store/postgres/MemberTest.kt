@@ -259,7 +259,7 @@ internal class MemberTest {
 
 		val guildMemberUpdate = GuildMemberUpdate.builder()
 			.guildId(guildId)
-			.nick("Neelix")
+			.nickOrNull("Neelix")
 			.user(user(userId).build())
 			.build()
 		updater.onGuildMemberUpdate(0, guildMemberUpdate).block()

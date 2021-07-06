@@ -96,7 +96,7 @@ internal class PresenceTest {
 
 		val presenceUpdate = PresenceUpdate.builder()
 			.guildId(guildId)
-			.user(partialUser(userId).avatar("borg.png").build())
+			.user(partialUser(userId).avatarOrNull("borg.png").build())
 			.status("online")
 			.clientStatus(ClientStatusData.builder().build())
 			.build()
