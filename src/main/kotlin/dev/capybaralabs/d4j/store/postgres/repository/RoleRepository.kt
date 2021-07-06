@@ -27,8 +27,7 @@ internal class RoleRepository(private val factory: ConnectionFactory, private va
 					guild_id BIGINT NOT NULL,
 					data JSONB NOT NULL,
 					shard_index INT NOT NULL,
-					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id),
-					CONSTRAINT d4j_discord_guild_role_unique UNIQUE (guild_id, role_id)
+					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id)
 				)
 				""".trimIndent()
 			).executeConsuming()

@@ -27,8 +27,7 @@ internal class ChannelRepository(private val factory: ConnectionFactory, private
 					guild_id BIGINT,
 					data JSONB NOT NULL,
 					shard_index INT NOT NULL,
-					CONSTRAINT d4j_discord_channel_pkey PRIMARY KEY (channel_id),
-					CONSTRAINT d4j_discord_guild_channel_unique UNIQUE (guild_id, channel_id)
+					CONSTRAINT d4j_discord_channel_pkey PRIMARY KEY (channel_id)
 				)
 				""".trimIndent()
 			).executeConsuming()

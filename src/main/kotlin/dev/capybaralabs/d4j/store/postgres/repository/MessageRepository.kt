@@ -27,8 +27,7 @@ internal class MessageRepository(private val factory: ConnectionFactory, private
 					channel_id BIGINT NOT NULL,
 					data JSONB NOT NULL,
 					shard_index INT NOT NULL,
-					CONSTRAINT d4j_discord_message_pkey PRIMARY KEY (message_id),
-					CONSTRAINT d4j_discord_channel_message_unique UNIQUE (channel_id, message_id)
+					CONSTRAINT d4j_discord_message_pkey PRIMARY KEY (message_id)
 				)
 				""".trimIndent()
 			).executeConsuming()

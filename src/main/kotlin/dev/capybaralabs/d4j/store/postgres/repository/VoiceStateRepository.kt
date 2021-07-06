@@ -28,8 +28,7 @@ internal class VoiceStateRepository(private val factory: ConnectionFactory, priv
 					guild_id BIGINT NOT NULL,
 					data JSONB NOT NULL,
 					shard_index INT NOT NULL,
-					CONSTRAINT d4j_discord_voice_state_pkey PRIMARY KEY (user_id, channel_id),
-					CONSTRAINT d4j_discord_guild_voice_state_unique UNIQUE (guild_id, channel_id, user_id)
+					CONSTRAINT d4j_discord_voice_state_pkey PRIMARY KEY (user_id, channel_id)
 				)
 				""".trimIndent()
 			).executeConsuming()
