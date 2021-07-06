@@ -8,7 +8,7 @@ plugins {
 	id "com.adarshr.test-logger" version "3.0.0"
 }
 
-group = "dev.capybaralabs.d4j.store.postgres"
+group = "dev.capybaralabs"
 version = "0.0.1-SNAPSHOT"
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
