@@ -69,6 +69,11 @@ jacocoTestReport {
 tasks.withType(org.sonarqube.gradle.SonarQubeTask) {
 	dependsOn jacocoTestReport
 }
+sonarqube {
+	properties {
+		property "sonar.projectKey", "dev.capybaralabs.d4j.store.postgres:d4j-postgres-store"
+	}
+}
 
 def isNonStable = { String version ->
 	def stableKeyword = ["RELEASE", "FINAL", "GA"].any { it -> version.toUpperCase().contains(it) }
