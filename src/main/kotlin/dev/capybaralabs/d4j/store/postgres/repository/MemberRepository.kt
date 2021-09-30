@@ -155,7 +155,14 @@ internal class MemberRepository(private val factory: ConnectionFactory, private 
 				connection.createStatement("SELECT guild_id, data FROM d4j_discord_member WHERE user_id = $1")
 					.bind("$1", userId)
 					.execute().toFlux()
-					.flatMap { it.map { row, _ -> Pair(row.get("guild_id", java.lang.Long::class.java).toLong(), row.get("data", ByteArray::class.java)) } }
+					.flatMap {
+						it.map { row, _ ->
+							Pair(
+								row.get("guild_id", java.lang.Long::class.java)!!.toLong(),
+								row.get("data", ByteArray::class.java)!!
+							)
+						}
+					}
 					.map { Pair(it.first, serde.deserialize(it.second, MemberData::class.java)) }
 			}
 		}
