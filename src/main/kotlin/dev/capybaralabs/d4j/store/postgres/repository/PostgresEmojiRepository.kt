@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the emoji table
  */
-internal class EmojiRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresEmojiRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

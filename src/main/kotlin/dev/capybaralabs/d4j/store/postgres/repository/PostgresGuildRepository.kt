@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the guild table
  */
-internal class GuildRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresGuildRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {
