@@ -10,7 +10,7 @@
 
    ```groovy
        test {
-           JUnitPlatform()
+           useJUnitPlatform()
            systemProperty "junit.jupiter.extensions.autodetection.enabled", "true"
        }
    ```

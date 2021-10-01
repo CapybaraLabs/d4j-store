@@ -2,16 +2,18 @@ plugins {
 	id "org.jetbrains.kotlin.jvm" version "1.5.31"
 	id "java-library"
 	id "com.github.ben-manes.versions" version "0.39.0"
-	id "maven-publish"
 	id "jacoco"
 	id "org.sonarqube" version "3.3"
 	id "com.adarshr.test-logger" version "3.0.0"
 }
 
-group = "dev.capybaralabs"
-version = "0.1.0-SNAPSHOT"
 
 allprojects {
+	group = "dev.capybaralabs.d4j-postgres-store"
+	version = "0.1.1-SNAPSHOT"
+
+	apply plugin: "maven-publish"
+
 	repositories {
 		mavenCentral()
 //		maven { url "https://oss.sonatype.org/content/repositories/snapshots" } // D4J snapshots
@@ -30,6 +32,14 @@ configure(allprojects.findAll { it.name != 'platform' }) {
 		annotationProcessor platform(project(':platform'))
 		compileOnly platform(project(':platform'))
 	}
+
+	publishing {
+		publications {
+			create("main", MavenPublication) {
+				from(components.kotlin)
+			}
+		}
+	}
 }
 
 project(':platform') {
@@ -46,6 +56,14 @@ project(':platform') {
 			api "com.discord4j:discord4j-core:3.2.0"
 			api "io.r2dbc:r2dbc-postgresql:0.8.10.RELEASE"
 			api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
+		}
+	}
+
+	publishing {
+		publications {
+			create("main", MavenPublication) {
+				from(components.javaPlatform)
+			}
 		}
 	}
 }
@@ -107,13 +125,5 @@ tasks.named("dependencyUpdates").configure {
 	checkConstraints = true
 	rejectVersionIf {
 		isNonStable(it.candidate.version) && !isNonStable(it.currentVersion)
-	}
-}
-
-publishing {
-	publications {
-		create("main", MavenPublication) {
-			from(components.kotlin)
-		}
 	}
 }
