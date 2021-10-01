@@ -9,38 +9,58 @@ plugins {
 }
 
 group = "dev.capybaralabs"
-version = "0.0.1-SNAPSHOT"
+version = "0.1.0-SNAPSHOT"
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-	kotlinOptions.jvmTarget = 11
+allprojects {
+	repositories {
+		mavenCentral()
+//		maven { url "https://oss.sonatype.org/content/repositories/snapshots" } // D4J snapshots
+//		maven { url "https://repo.spring.io/milestone" }                        // D4J snapshots
+	}
 }
 
-repositories {
-	mavenCentral()
-	maven { url "https://oss.sonatype.org/content/repositories/snapshots" } // D4J snapshots
-	maven { url "https://repo.spring.io/milestone" }                        // D4J snapshots
+configure(allprojects.findAll { it.name != 'platform' }) {
+	apply plugin: "org.jetbrains.kotlin.jvm"
+
+	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+		kotlinOptions.jvmTarget = 11
+	}
+	dependencies {
+		api platform(project(':platform'))
+		annotationProcessor platform(project(':platform'))
+		compileOnly platform(project(':platform'))
+	}
+}
+
+project(':platform') {
+	apply plugin: 'java-platform'
+	javaPlatform {
+		allowDependencies()
+	}
+	dependencies {
+		api platform("org.jetbrains.kotlin:kotlin-bom:1.5.31")
+		api platform("org.springframework.boot:spring-boot-dependencies:2.5.5")
+		api platform("org.testcontainers:testcontainers-bom:1.16.0")
+		api platform("org.junit:junit-bom:5.8.1")
+		constraints {
+			api "com.discord4j:discord4j-core:3.2.0"
+			api "io.r2dbc:r2dbc-postgresql:0.8.10.RELEASE"
+			api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
+		}
+	}
 }
 
 dependencies {
-	implementation platform("org.jetbrains.kotlin:kotlin-bom")
-	implementation platform("org.springframework.boot:spring-boot-dependencies:2.5.5")
-	testImplementation platform("org.testcontainers:testcontainers-bom:1.16.0")
-
-	api "com.discord4j:discord4j-core:3.2.0"
-	api "io.r2dbc:r2dbc-postgresql:0.8.10.RELEASE"
-	api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
+	api "com.discord4j:discord4j-core"
+	api "io.r2dbc:r2dbc-postgresql"
+	api "io.r2dbc:r2dbc-pool"
 	api "org.slf4j:slf4j-api"
 
 	implementation "org.jetbrains.kotlin:kotlin-reflect"
 	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 	implementation "io.projectreactor.kotlin:reactor-kotlin-extensions"
 
-	testImplementation "org.jetbrains.kotlin:kotlin-test"
-	testImplementation "org.jetbrains.kotlin:kotlin-test-junit5"
-	testImplementation "org.junit.jupiter:junit-jupiter-api"
-	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-	testImplementation "org.assertj:assertj-core"
+	testImplementation project(":tck")
 	testImplementation "org.testcontainers:postgresql"
 	testImplementation "org.testcontainers:r2dbc"
 	testImplementation "ch.qos.logback:logback-classic"
@@ -52,6 +72,7 @@ test {
 	systemProperty "junit.jupiter.execution.parallel.enabled", "true"
 	systemProperty "junit.jupiter.execution.parallel.mode.default", "concurrent"
 	systemProperty "junit.jupiter.execution.parallel.mode.classes.default", "concurrent"
+	systemProperty "junit.jupiter.extensions.autodetection.enabled", "true"
 }
 
 testlogger {

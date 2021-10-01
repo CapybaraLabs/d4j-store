@@ -1,5 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.tck
 
+import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.Id
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.ChannelDelete
@@ -9,7 +10,10 @@ import discord4j.discordjson.json.gateway.MessageCreate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class ChannelTest {
+internal class ChannelTest(storeLayout: StoreLayout) {
+
+	private val accessor = storeLayout.dataAccessor
+	private val updater = storeLayout.gatewayDataUpdater
 
 	@Test
 	fun countChannels() {

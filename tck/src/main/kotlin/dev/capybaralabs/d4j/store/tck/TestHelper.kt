@@ -1,4 +1,4 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.tck
 
 import discord4j.discordjson.json.ActivityData
 import discord4j.discordjson.json.ChannelData
@@ -29,33 +29,15 @@ import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
 import discord4j.discordjson.json.gateway.GuildDelete
 import discord4j.discordjson.possible.Possible
-import io.r2dbc.pool.ConnectionPool
-import io.r2dbc.pool.ConnectionPoolConfiguration
-import io.r2dbc.spi.ConnectionFactories
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
-import reactor.tools.agent.ReactorDebugAgent
 
 
 private val LONGS = AtomicLong(ThreadLocalRandom.current().nextLong(Long.MAX_VALUE / 2, Long.MAX_VALUE))
 internal fun generateUniqueSnowflakeId(): Long {
 	return LONGS.decrementAndGet()
 }
-
-internal val storeLayout = PostgresStoreLayout(connectionPool())
-private fun connectionPool(): ConnectionPool {
-	ReactorDebugAgent.init()
-	ReactorDebugAgent.processExistingClasses()
-	return ConnectionPool(
-		ConnectionPoolConfiguration
-			.builder(ConnectionFactories.get("r2dbc:tc:postgresql:///test?TC_IMAGE_TAG=13"))
-			.build()
-	)
-}
-
-internal val accessor = storeLayout.dataAccessor
-internal val updater = storeLayout.gatewayDataUpdater
 
 // TODO add & verify all optional parameters
 

@@ -1,5 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.tck
 
+import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildUpdate
@@ -8,7 +9,11 @@ import discord4j.discordjson.possible.Possible
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class GuildTest {
+
+internal class GuildTest(storeLayout: StoreLayout) {
+
+	private val accessor = storeLayout.dataAccessor
+	private val updater = storeLayout.gatewayDataUpdater
 
 	@Test
 	fun countGuilds() {

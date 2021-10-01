@@ -1,0 +1,9 @@
+dependencies {
+	api "com.discord4j:discord4j-core"
+	api "org.slf4j:slf4j-api"
+	api "org.junit.jupiter:junit-jupiter-api"
+
+	implementation "org.jetbrains.kotlin:kotlin-test-junit5"
+	implementation "org.junit.platform:junit-platform-suite-engine"
+	implementation "org.assertj:assertj-core"
+}

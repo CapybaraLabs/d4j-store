@@ -1,6 +1,7 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.tck
 
 import discord4j.common.store.api.`object`.InvalidationCause
+import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.GuildCreate
@@ -14,7 +15,10 @@ import org.junit.jupiter.api.Test
 /**
  * Make sure the shardIds used here are isolated from the rest of the test suite, so we don't delete their data accidentally
  */
-internal class ShardTest {
+internal class ShardTest(storeLayout: StoreLayout) {
+
+	private val accessor = storeLayout.dataAccessor
+	private val updater = storeLayout.gatewayDataUpdater
 
 	@Test
 	fun onShardInvalidation_deleteChannelsOnThisShard() {

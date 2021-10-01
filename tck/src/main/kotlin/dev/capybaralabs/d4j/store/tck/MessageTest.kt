@@ -1,5 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.tck
 
+import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.json.gateway.MessageDelete
@@ -8,7 +9,10 @@ import discord4j.discordjson.json.gateway.MessageUpdate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class MessageTest {
+internal class MessageTest(storeLayout: StoreLayout) {
+
+	private val accessor = storeLayout.dataAccessor
+	private val updater = storeLayout.gatewayDataUpdater
 
 	@Test
 	fun countMessages() {
