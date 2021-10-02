@@ -86,9 +86,9 @@ task codeCoverageReport(type: JacocoReport) {
 		sourceSets it.sourceSets.main
 	}
 	reports {
-		xml.enabled true
-		html.enabled true
-		csv.enabled false
+		xml.required.set(true)
+		html.required.set(true)
+		csv.required.set(false)
 	}
 }
 // always run the tests before generating the report
