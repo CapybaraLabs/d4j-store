@@ -23,6 +23,12 @@ subprojects {
 	apply plugin: "maven-publish"
 }
 
+configurations.create("internal") {
+	visible false
+	canBeConsumed false
+	canBeResolved false
+}
+
 configure(subprojects.findAll { it.name != 'platform' }) {
 	apply plugin: "org.jetbrains.kotlin.jvm"
 	apply plugin: "com.adarshr.test-logger"
@@ -30,10 +36,15 @@ configure(subprojects.findAll { it.name != 'platform' }) {
 	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 		kotlinOptions.jvmTarget = 11
 	}
+
+	configurations {
+		compileClasspath.extendsFrom(internal)
+		runtimeClasspath.extendsFrom(internal)
+		testCompileClasspath.extendsFrom(internal)
+		testRuntimeClasspath.extendsFrom(internal)
+	}
 	dependencies {
-		api platform(project(':platform'))
-		annotationProcessor platform(project(':platform'))
-		compileOnly platform(project(':platform'))
+		internal platform(project(':platform'))
 	}
 
 	testlogger {
@@ -46,32 +57,6 @@ configure(subprojects.findAll { it.name != 'platform' }) {
 		publications {
 			create("main", MavenPublication) {
 				from(components.kotlin)
-			}
-		}
-	}
-}
-
-project(':platform') {
-	apply plugin: 'java-platform'
-	javaPlatform {
-		allowDependencies()
-	}
-	dependencies {
-		api platform("org.jetbrains.kotlin:kotlin-bom:1.5.31")
-		api platform("org.springframework.boot:spring-boot-dependencies:2.5.5")
-		api platform("org.testcontainers:testcontainers-bom:1.16.0")
-		api platform("org.junit:junit-bom:5.8.1")
-		constraints {
-			api "com.discord4j:discord4j-core:3.2.0"
-			api "io.r2dbc:r2dbc-postgresql:0.8.10.RELEASE"
-			api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
-		}
-	}
-
-	publishing {
-		publications {
-			create("main", MavenPublication) {
-				from(components.javaPlatform)
 			}
 		}
 	}
