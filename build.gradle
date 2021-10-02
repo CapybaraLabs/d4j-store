@@ -10,16 +10,16 @@ plugins {
 allprojects {
 	group = "dev.capybaralabs.d4j-store"
 	version = "0.1.1-SNAPSHOT"
-}
-
-subprojects {
-	apply plugin: "maven-publish"
 
 	repositories {
 		mavenCentral()
 //		maven { url "https://oss.sonatype.org/content/repositories/snapshots" } // D4J snapshots
 //		maven { url "https://repo.spring.io/milestone" }                        // D4J snapshots
 	}
+}
+
+subprojects {
+	apply plugin: "maven-publish"
 }
 
 configure(subprojects.findAll { it.name != 'platform' }) {
