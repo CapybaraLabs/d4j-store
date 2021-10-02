@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.MessageRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the message table
  */
-internal class PostgresMessageRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresMessageRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	MessageRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -34,7 +36,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}.blockLast()
 	}
 
-	fun save(message: MessageData, shardIndex: Int): Mono<Void> {
+	override fun save(message: MessageData, shardIndex: Int): Mono<Void> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement(
@@ -52,7 +54,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun delete(messageId: Long): Mono<Int> {
+	override fun delete(messageId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id = $1")
@@ -62,7 +64,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun deleteByIds(messageIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(messageIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id = ANY($1)")
@@ -72,7 +74,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE shard_index = $1")
@@ -82,7 +84,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun deleteByChannelId(channelId: Long): Mono<Int> {
+	override fun deleteByChannelId(channelId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE channel_id = $1")
@@ -92,7 +94,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun deleteByChannelIds(channelIds: List<Long>): Mono<Int> {
+	override fun deleteByChannelIds(channelIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE channel_id = ANY($1)")
@@ -102,7 +104,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun countMessages(): Mono<Long> {
+	override fun countMessages(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_message")
@@ -111,7 +113,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun countMessagesInChannel(channelId: Long): Mono<Long> {
+	override fun countMessagesInChannel(channelId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_message WHERE channel_id = $1")
@@ -122,7 +124,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 	}
 
 
-	fun getMessages(): Flux<MessageData> {
+	override fun getMessages(): Flux<MessageData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_message")
@@ -131,7 +133,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getMessagesInChannel(channelId: Long): Flux<MessageData> {
+	override fun getMessagesInChannel(channelId: Long): Flux<MessageData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_message WHERE channel_id = $1")
@@ -141,7 +143,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getMessageById(messageId: Long): Mono<MessageData> {
+	override fun getMessageById(messageId: Long): Mono<MessageData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_message WHERE message_id = $1")
@@ -151,7 +153,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
+	override fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_message WHERE message_id = ANY($1)")

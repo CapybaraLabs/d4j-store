@@ -1,6 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.common
 
-import dev.capybaralabs.d4j.store.postgres.repository.Repositories
+import dev.capybaralabs.d4j.store.common.repository.Repositories
 import discord4j.common.store.api.layout.DataAccessor
 import discord4j.discordjson.json.ChannelData
 import discord4j.discordjson.json.EmojiData
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
 /**
  * TODO
  */
-internal class PostgresDataAccessor(private val repositories: Repositories) : DataAccessor {
+class CommonDataAccessor(private val repositories: Repositories) : DataAccessor {
 
 	override fun countChannels(): Mono<Long> {
 		return repositories.channels.countChannels()

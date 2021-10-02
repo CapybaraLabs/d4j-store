@@ -1,0 +1,8 @@
+dependencies {
+	api "com.discord4j:discord4j-core"
+	api "org.slf4j:slf4j-api"
+
+	api "org.jetbrains.kotlin:kotlin-reflect"
+	api "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+	api "io.projectreactor.kotlin:reactor-kotlin-extensions"
+}

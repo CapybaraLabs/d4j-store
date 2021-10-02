@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the emoji table
  */
-internal class PostgresEmojiRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresEmojiRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	EmojiRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -34,11 +36,11 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}.blockLast()
 	}
 
-	fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
+	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
 		return saveAll(guildId, listOf(emoji), shardIndex).then()
 	}
 
-	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
 			return Flux.empty()
@@ -66,7 +68,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1)")
@@ -77,7 +79,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 	}
 
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE shard_index = $1")
@@ -87,7 +89,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun countEmojis(): Mono<Long> {
+	override fun countEmojis(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_emoji")
@@ -96,7 +98,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun countEmojisInGuild(guildId: Long): Mono<Long> {
+	override fun countEmojisInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_emoji WHERE guild_id = $1")
@@ -106,7 +108,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun getEmojis(): Flux<EmojiData> {
+	override fun getEmojis(): Flux<EmojiData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_emoji")
@@ -115,7 +117,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun getEmojisInGuild(guildId: Long): Flux<EmojiData> {
+	override fun getEmojisInGuild(guildId: Long): Flux<EmojiData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_emoji WHERE guild_id = $1")
@@ -125,7 +127,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData> {
+	override fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_emoji WHERE guild_id = $1 AND emoji_id = $2")

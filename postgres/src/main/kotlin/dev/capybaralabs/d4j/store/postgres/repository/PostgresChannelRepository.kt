@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the channel table
  */
-internal class PostgresChannelRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresChannelRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	ChannelRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -34,13 +36,13 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}.blockLast()
 	}
 
-	fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
+	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
 		return Mono.defer {
 			saveAll(listOf(channel), shardIndex).then()
 		}
 	}
 
-	fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
 		if (channels.isEmpty()) {
 			return Flux.empty()
 		}
@@ -74,7 +76,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun delete(channelId: Long): Mono<Int> {
+	override fun delete(channelId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = $1")
@@ -84,7 +86,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun deleteByIds(channelIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = ANY($1)")
@@ -95,7 +97,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 	}
 
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE shard_index = $1")
@@ -105,7 +107,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun countChannels(): Mono<Long> {
+	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_channel")
@@ -114,7 +116,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun countChannelsInGuild(guildId: Long): Mono<Long> {
+	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_channel WHERE guild_id = $1")
@@ -124,7 +126,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getChannelById(channelId: Long): Mono<ChannelData> {
+	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_channel WHERE channel_id = $1")
@@ -134,7 +136,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getChannels(): Flux<ChannelData> {
+	override fun getChannels(): Flux<ChannelData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_channel")
@@ -143,7 +145,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
+	override fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_channel WHERE guild_id = $1")
