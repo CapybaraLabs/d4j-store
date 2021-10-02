@@ -1,13 +1,14 @@
 plugins {
 	id "org.jetbrains.kotlin.jvm" version "1.5.31"
 	id "com.github.ben-manes.versions" version "0.39.0"
-	id "jacoco"
 	id "org.sonarqube" version "3.3"
 	id "com.adarshr.test-logger" version "3.0.0" apply false
 }
 
 
 allprojects {
+	apply plugin: "jacoco"
+
 	group = "dev.capybaralabs.d4j-store"
 	version = "0.1.1-SNAPSHOT"
 
@@ -39,16 +40,6 @@ configure(subprojects.findAll { it.name != 'platform' }) {
 		theme "mocha-parallel"
 		slowThreshold 500
 		showFullStackTraces true
-	}
-
-	jacocoTestReport {
-		reports {
-			xml.required.set(true)
-		}
-	}
-
-	tasks.withType(org.sonarqube.gradle.SonarQubeTask) {
-		dependsOn jacocoTestReport
 	}
 
 	publishing {
@@ -86,9 +77,31 @@ project(':platform') {
 	}
 }
 
+// See https://github.com/gradle/gradle/issues/8881#issuecomment-593227192
+task codeCoverageReport(type: JacocoReport) {
+	// Gather execution data from all subprojects
+	executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+	// Add all relevant sourcesets from the subprojects
+	subprojects.each {
+		sourceSets it.sourceSets.main
+	}
+	reports {
+		xml.enabled true
+		html.enabled true
+		csv.enabled false
+	}
+}
+// always run the tests before generating the report
+codeCoverageReport.dependsOn {
+	subprojects.findAll { it.name != 'platform' }*.test
+}
+tasks.withType(org.sonarqube.gradle.SonarQubeTask) {
+	dependsOn codeCoverageReport
+}
 sonarqube {
 	properties {
 		property "sonar.projectKey", "dev.capybaralabs.d4j.store.postgres:d4j-postgres-store"
+		property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
 	}
 }
 
