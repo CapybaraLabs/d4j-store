@@ -3,7 +3,7 @@
 1. Add a dependency on the TCK
 
    ```groovy
-       testImplementation "dev.capybaralabs:d4j-postgres-store:tck:x.y.z"
+       testImplementation "dev.capybaralabs.d4j-store:tck:x.y.z"
    ```
 
 2. Set up JUnit Platform and automatic extension discovery
