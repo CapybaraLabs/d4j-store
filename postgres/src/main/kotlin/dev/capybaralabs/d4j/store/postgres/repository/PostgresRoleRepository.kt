@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class RoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

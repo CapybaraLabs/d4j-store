@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the presence table
  */
-internal class PresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresPresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

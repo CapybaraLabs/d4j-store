@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the user table
  */
-internal class UserRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresUserRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 
 	init {

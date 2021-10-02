@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class VoiceStateRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresVoiceStateRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

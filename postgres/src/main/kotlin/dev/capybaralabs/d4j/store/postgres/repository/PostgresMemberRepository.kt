@@ -17,7 +17,7 @@ import reactor.kotlin.core.publisher.toFlux
 /**
  * Concerned with operations on the member table
  */
-internal class MemberRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresMemberRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

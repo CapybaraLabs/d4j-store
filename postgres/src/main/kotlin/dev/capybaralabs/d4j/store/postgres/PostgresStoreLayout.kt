@@ -15,16 +15,16 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
-import dev.capybaralabs.d4j.store.postgres.repository.ChannelRepository
-import dev.capybaralabs.d4j.store.postgres.repository.EmojiRepository
-import dev.capybaralabs.d4j.store.postgres.repository.GuildRepository
-import dev.capybaralabs.d4j.store.postgres.repository.MemberRepository
-import dev.capybaralabs.d4j.store.postgres.repository.MessageRepository
-import dev.capybaralabs.d4j.store.postgres.repository.PresenceRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresChannelRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresEmojiRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresGuildRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresMemberRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresMessageRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresPresenceRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresRoleRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresUserRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresVoiceStateRepository
 import dev.capybaralabs.d4j.store.postgres.repository.Repositories
-import dev.capybaralabs.d4j.store.postgres.repository.RoleRepository
-import dev.capybaralabs.d4j.store.postgres.repository.UserRepository
-import dev.capybaralabs.d4j.store.postgres.repository.VoiceStateRepository
 import discord4j.common.store.api.layout.DataAccessor
 import discord4j.common.store.api.layout.GatewayDataUpdater
 import discord4j.common.store.api.layout.StoreLayout
@@ -50,15 +50,15 @@ class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
 	// TODO avoid blocking calls (db creations) in constructor?
 	private val repositories = Repositories(
 		connectionFactory,
-		ChannelRepository(connectionFactory, serde),
-		EmojiRepository(connectionFactory, serde),
-		GuildRepository(connectionFactory, serde),
-		MemberRepository(connectionFactory, serde),
-		MessageRepository(connectionFactory, serde),
-		PresenceRepository(connectionFactory, serde),
-		RoleRepository(connectionFactory, serde),
-		UserRepository(connectionFactory, serde),
-		VoiceStateRepository(connectionFactory, serde),
+		PostgresChannelRepository(connectionFactory, serde),
+		PostgresEmojiRepository(connectionFactory, serde),
+		PostgresGuildRepository(connectionFactory, serde),
+		PostgresMemberRepository(connectionFactory, serde),
+		PostgresMessageRepository(connectionFactory, serde),
+		PostgresPresenceRepository(connectionFactory, serde),
+		PostgresRoleRepository(connectionFactory, serde),
+		PostgresUserRepository(connectionFactory, serde),
+		PostgresVoiceStateRepository(connectionFactory, serde),
 	)
 
 	private val postgresDataAccessor: PostgresDataAccessor = PostgresDataAccessor(repositories)

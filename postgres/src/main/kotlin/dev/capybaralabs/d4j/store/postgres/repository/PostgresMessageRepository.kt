@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the message table
  */
-internal class MessageRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresMessageRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {

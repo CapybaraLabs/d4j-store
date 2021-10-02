@@ -1,18 +1,15 @@
 plugins {
 	id "org.jetbrains.kotlin.jvm" version "1.5.31"
-	id "java-library"
 	id "com.github.ben-manes.versions" version "0.39.0"
 	id "jacoco"
 	id "org.sonarqube" version "3.3"
-	id "com.adarshr.test-logger" version "3.0.0"
+	id "com.adarshr.test-logger" version "3.0.0" apply false
 }
 
 
 allprojects {
-	group = "dev.capybaralabs.d4j-postgres-store"
+	group = "dev.capybaralabs.d4j-store"
 	version = "0.1.1-SNAPSHOT"
-
-	apply plugin: "maven-publish"
 
 	repositories {
 		mavenCentral()
@@ -21,8 +18,13 @@ allprojects {
 	}
 }
 
-configure(allprojects.findAll { it.name != 'platform' }) {
+subprojects {
+	apply plugin: "maven-publish"
+}
+
+configure(subprojects.findAll { it.name != 'platform' }) {
 	apply plugin: "org.jetbrains.kotlin.jvm"
+	apply plugin: "com.adarshr.test-logger"
 
 	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 		kotlinOptions.jvmTarget = 11
@@ -31,6 +33,22 @@ configure(allprojects.findAll { it.name != 'platform' }) {
 		api platform(project(':platform'))
 		annotationProcessor platform(project(':platform'))
 		compileOnly platform(project(':platform'))
+	}
+
+	testlogger {
+		theme "mocha-parallel"
+		slowThreshold 500
+		showFullStackTraces true
+	}
+
+	jacocoTestReport {
+		reports {
+			xml.required.set(true)
+		}
+	}
+
+	tasks.withType(org.sonarqube.gradle.SonarQubeTask) {
+		dependsOn jacocoTestReport
 	}
 
 	publishing {
@@ -68,46 +86,6 @@ project(':platform') {
 	}
 }
 
-dependencies {
-	api "com.discord4j:discord4j-core"
-	api "io.r2dbc:r2dbc-postgresql"
-	api "io.r2dbc:r2dbc-pool"
-	api "org.slf4j:slf4j-api"
-
-	implementation "org.jetbrains.kotlin:kotlin-reflect"
-	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-	implementation "io.projectreactor.kotlin:reactor-kotlin-extensions"
-
-	testImplementation project(":tck")
-	testImplementation "org.testcontainers:postgresql"
-	testImplementation "org.testcontainers:r2dbc"
-	testImplementation "ch.qos.logback:logback-classic"
-	testImplementation "io.projectreactor:reactor-tools"
-}
-
-test {
-	useJUnitPlatform()
-	systemProperty "junit.jupiter.execution.parallel.enabled", "true"
-	systemProperty "junit.jupiter.execution.parallel.mode.default", "concurrent"
-	systemProperty "junit.jupiter.execution.parallel.mode.classes.default", "concurrent"
-	systemProperty "junit.jupiter.extensions.autodetection.enabled", "true"
-}
-
-testlogger {
-	theme "mocha-parallel"
-	slowThreshold 500
-	showFullStackTraces true
-}
-
-jacocoTestReport {
-	reports {
-		xml.required.set(true)
-	}
-}
-
-tasks.withType(org.sonarqube.gradle.SonarQubeTask) {
-	dependsOn jacocoTestReport
-}
 sonarqube {
 	properties {
 		property "sonar.projectKey", "dev.capybaralabs.d4j.store.postgres:d4j-postgres-store"

@@ -1,0 +1,24 @@
+dependencies {
+	api "com.discord4j:discord4j-core"
+	api "io.r2dbc:r2dbc-postgresql"
+	api "io.r2dbc:r2dbc-pool"
+	api "org.slf4j:slf4j-api"
+
+	implementation "org.jetbrains.kotlin:kotlin-reflect"
+	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+	implementation "io.projectreactor.kotlin:reactor-kotlin-extensions"
+
+	testImplementation project(":tck")
+	testImplementation "org.testcontainers:postgresql"
+	testImplementation "org.testcontainers:r2dbc"
+	testImplementation "ch.qos.logback:logback-classic"
+	testImplementation "io.projectreactor:reactor-tools"
+}
+
+test {
+	useJUnitPlatform()
+	systemProperty "junit.jupiter.execution.parallel.enabled", "true"
+	systemProperty "junit.jupiter.execution.parallel.mode.default", "concurrent"
+	systemProperty "junit.jupiter.execution.parallel.mode.classes.default", "concurrent"
+	systemProperty "junit.jupiter.extensions.autodetection.enabled", "true"
+}

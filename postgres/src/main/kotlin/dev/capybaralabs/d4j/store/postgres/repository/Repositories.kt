@@ -7,15 +7,15 @@ import reactor.core.publisher.Mono
 
 internal class Repositories internal constructor(
 	private val factory: ConnectionFactory,
-	internal val channels: ChannelRepository,
-	internal val emojis: EmojiRepository,
-	internal val guilds: GuildRepository,
-	internal val members: MemberRepository,
-	internal val messages: MessageRepository,
-	internal val presences: PresenceRepository,
-	internal val roles: RoleRepository,
-	internal val users: UserRepository,
-	internal val voiceStates: VoiceStateRepository,
+	internal val channels: PostgresChannelRepository,
+	internal val emojis: PostgresEmojiRepository,
+	internal val guilds: PostgresGuildRepository,
+	internal val members: PostgresMemberRepository,
+	internal val messages: PostgresMessageRepository,
+	internal val presences: PostgresPresenceRepository,
+	internal val roles: PostgresRoleRepository,
+	internal val users: PostgresUserRepository,
+	internal val voiceStates: PostgresVoiceStateRepository,
 ) {
 
 	// TODO find a way to safely write across multiple tables

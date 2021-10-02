@@ -27,7 +27,7 @@ jobs:
       - name: Gradle Assemble
         uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf # v1.10
         with:
-          arguments: assemble --info
+          arguments: clean assemble --info
 
       - name: Sonarcloud
         uses: burrunan/gradle-cache-action@cbdf4342ff988d143aa7a5aeceedffafb8c74bcf # v1.10
@@ -35,10 +35,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          arguments: check sonarqube --info -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
+          arguments: check sonarqube --no-build-cache --info -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@c6ffacdf2fce00e8222e3a373b87ec805a04bc46 # v1.18
         if: always()
         with:
-          files: build/test-results/**/*.xml
+          files: ./**/build/test-results/**/*.xml

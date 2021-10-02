@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the channel table
  */
-internal class ChannelRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresChannelRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
 
 	init {
 		withConnectionMany(factory) {
