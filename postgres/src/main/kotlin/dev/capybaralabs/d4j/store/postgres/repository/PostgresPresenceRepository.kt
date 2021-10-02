@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.PresenceRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the presence table
  */
-internal class PostgresPresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresPresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	PresenceRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -34,12 +36,12 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}.blockLast()
 	}
 
-	fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
+	override fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
 		return saveAll(guildId, listOf(presence), shardIndex).then()
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
 		if (presences.isEmpty()) {
 			return Flux.empty()
 		}
@@ -66,7 +68,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE guild_id = $1 AND user_id = $2")
@@ -77,7 +79,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE guild_id = $1")
@@ -87,7 +89,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE shard_index = $1")
@@ -97,7 +99,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun countPresences(): Mono<Long> {
+	override fun countPresences(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_presence")
@@ -106,7 +108,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun countPresencesInGuild(guildId: Long): Mono<Long> {
+	override fun countPresencesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_presence WHERE guild_id = $1")
@@ -116,7 +118,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun getPresences(): Flux<PresenceData> {
+	override fun getPresences(): Flux<PresenceData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_presence")
@@ -125,7 +127,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun getPresencesInGuild(guildId: Long): Flux<PresenceData> {
+	override fun getPresencesInGuild(guildId: Long): Flux<PresenceData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_presence WHERE guild_id = $1")
@@ -135,7 +137,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 	}
 
-	fun getPresenceById(guildId: Long, userId: Long): Mono<PresenceData> {
+	override fun getPresenceById(guildId: Long, userId: Long): Mono<PresenceData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_presence WHERE guild_id = $1 AND user_id = $2")

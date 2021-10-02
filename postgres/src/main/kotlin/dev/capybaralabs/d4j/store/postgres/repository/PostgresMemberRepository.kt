@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.MemberRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -17,7 +18,8 @@ import reactor.kotlin.core.publisher.toFlux
 /**
  * Concerned with operations on the member table
  */
-internal class PostgresMemberRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresMemberRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	MemberRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -35,12 +37,12 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}.blockLast()
 	}
 
-	fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
+	override fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
 		return saveAll(guildId, listOf(member), shardIndex).then()
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Flux<Int> {
 		if (members.isEmpty()) {
 			return Flux.empty()
 		}
@@ -69,7 +71,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 	}
 
 
-	fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_member WHERE guild_id = $1 AND user_id = $2")
@@ -80,7 +82,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_member WHERE guild_id = $1")
@@ -90,7 +92,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_member WHERE shard_index = $1")
@@ -100,7 +102,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun countMembers(): Mono<Long> {
+	override fun countMembers(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_member")
@@ -109,7 +111,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun countMembersInGuild(guildId: Long): Mono<Long> {
+	override fun countMembersInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_member WHERE guild_id = $1")
@@ -119,7 +121,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun getMembers(): Flux<MemberData> {
+	override fun getMembers(): Flux<MemberData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_member")
@@ -128,7 +130,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun getExactMembersInGuild(guildId: Long): Flux<MemberData> {
+	override fun getExactMembersInGuild(guildId: Long): Flux<MemberData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_member WHERE guild_id = $1")
@@ -138,7 +140,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun getMemberById(guildId: Long, userId: Long): Mono<MemberData> {
+	override fun getMemberById(guildId: Long, userId: Long): Mono<MemberData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_member WHERE guild_id = $1 AND user_id = $2")
@@ -149,7 +151,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	fun getMembersByUserId(userId: Long): Flux<Pair<Long, MemberData>> {
+	override fun getMembersByUserId(userId: Long): Flux<Pair<Long, MemberData>> {
 		return Flux.defer {
 			withConnectionMany(factory) { connection ->
 				connection.createStatement("SELECT guild_id, data FROM d4j_discord_member WHERE user_id = $1")

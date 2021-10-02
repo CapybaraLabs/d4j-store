@@ -1,6 +1,6 @@
-package dev.capybaralabs.d4j.store.postgres
+package dev.capybaralabs.d4j.store.common
 
-import dev.capybaralabs.d4j.store.postgres.repository.Repositories
+import dev.capybaralabs.d4j.store.common.repository.Repositories
 import discord4j.common.store.api.`object`.InvalidationCause
 import discord4j.common.store.api.`object`.PresenceAndUserData
 import discord4j.common.store.api.layout.GatewayDataUpdater
@@ -52,22 +52,12 @@ import reactor.core.publisher.Mono
 
 
 /**
- * TODO
- *
- *
- * The `.flatMap(PostgresqlResult::getRowsUpdated)`
- * lines are necessary because of https://github.com/pgjdbc/r2dbc-postgresql/issues/194#issuecomment-557443260
- *
- *
- * Ids have to saved as TEXT, because JSONB does not support deleting numeric array entries (easily)
- *
- *
  * Some copying going on from [discord4j.common.store.legacy.LegacyStoreLayout]
  */
-internal class PostgresGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpdater {
+class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpdater {
 
 	companion object {
-		private val log = LoggerFactory.getLogger(PostgresGatewayDataUpdater::class.java)
+		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
 	}
 
 	private val selfUser = AtomicReference<UserData?>()

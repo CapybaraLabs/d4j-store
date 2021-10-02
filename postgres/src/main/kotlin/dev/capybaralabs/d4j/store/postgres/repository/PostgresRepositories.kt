@@ -1,25 +1,26 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.Repositories
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
 import io.r2dbc.spi.ConnectionFactory
 import reactor.core.publisher.Mono
 
-internal class Repositories internal constructor(
+internal class PostgresRepositories internal constructor(
 	private val factory: ConnectionFactory,
-	internal val channels: PostgresChannelRepository,
-	internal val emojis: PostgresEmojiRepository,
-	internal val guilds: PostgresGuildRepository,
-	internal val members: PostgresMemberRepository,
-	internal val messages: PostgresMessageRepository,
-	internal val presences: PostgresPresenceRepository,
-	internal val roles: PostgresRoleRepository,
-	internal val users: PostgresUserRepository,
-	internal val voiceStates: PostgresVoiceStateRepository,
-) {
+	override val channels: PostgresChannelRepository,
+	override val emojis: PostgresEmojiRepository,
+	override val guilds: PostgresGuildRepository,
+	override val members: PostgresMemberRepository,
+	override val messages: PostgresMessageRepository,
+	override val presences: PostgresPresenceRepository,
+	override val roles: PostgresRoleRepository,
+	override val users: PostgresUserRepository,
+	override val voiceStates: PostgresVoiceStateRepository,
+) : Repositories {
 
 	// TODO find a way to safely write across multiple tables
-	fun deleteOrphanedUsers(shardIndex: Int): Mono<Long> {
+	override fun deleteOrphanedUsers(shardIndex: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) { connection ->
 				connection.createStatement(

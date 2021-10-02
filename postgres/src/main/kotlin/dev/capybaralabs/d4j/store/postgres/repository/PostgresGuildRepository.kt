@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.GuildRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the guild table
  */
-internal class PostgresGuildRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresGuildRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	GuildRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -33,7 +35,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		}.blockLast()
 	}
 
-	fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
+	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement(
@@ -51,7 +53,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 	}
 
 
-	fun delete(guildId: Long): Mono<Int> {
+	override fun delete(guildId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE guild_id = $1")
@@ -73,7 +75,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 //		}
 //	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE shard_index = $1")
@@ -83,7 +85,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun countGuilds(): Mono<Long> {
+	override fun countGuilds(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_guild")
@@ -92,7 +94,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun getGuildById(guildId: Long): Mono<GuildData> {
+	override fun getGuildById(guildId: Long): Mono<GuildData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_guild WHERE guild_id = $1")
@@ -102,7 +104,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	fun getGuilds(): Flux<GuildData> {
+	override fun getGuilds(): Flux<GuildData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_guild")

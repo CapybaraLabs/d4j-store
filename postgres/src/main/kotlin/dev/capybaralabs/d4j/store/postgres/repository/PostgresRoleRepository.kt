@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.RoleRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	RoleRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -34,11 +36,11 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}.blockLast()
 	}
 
-	fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
+	override fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
 		return saveAll(guildId, listOf(role), shardIndex).then()
 	}
 
-	fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Flux<Int> {
 		if (roles.isEmpty()) {
 			return Flux.empty()
 		}
@@ -65,7 +67,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun deleteById(roleId: Long): Mono<Int> {
+	override fun deleteById(roleId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")
@@ -75,7 +77,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun deleteByIds(roleIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(roleIds: List<Long>): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it
@@ -86,7 +88,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
@@ -96,7 +98,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun countRoles(): Mono<Long> {
+	override fun countRoles(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role")
@@ -105,7 +107,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun countRolesInGuild(guildId: Long): Mono<Long> {
+	override fun countRolesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role WHERE guild_id = $1")
@@ -115,7 +117,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun getRoles(): Flux<RoleData> {
+	override fun getRoles(): Flux<RoleData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_role")
@@ -124,7 +126,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun getRolesInGuild(guildId: Long): Flux<RoleData> {
+	override fun getRolesInGuild(guildId: Long): Flux<RoleData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE guild_id = $1")
@@ -134,7 +136,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun getRoleById(roleId: Long): Mono<RoleData> {
+	override fun getRoleById(roleId: Long): Mono<RoleData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE role_id = $1")

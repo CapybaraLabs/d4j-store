@@ -1,4 +1,5 @@
 rootProject.name = "d4j-store"
+include "common"
 include "platform"
 include "postgres"
 include "tck"

@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class PostgresVoiceStateRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresVoiceStateRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	VoiceStateRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -35,11 +37,11 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}.blockLast()
 	}
 
-	fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
+	override fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
 		return saveAll(listOf(voiceState), shardIndex).then()
 	}
 
-	fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Flux<Int> {
 		if (voiceStates.isEmpty()) {
 			return Flux.empty()
 		}
@@ -72,7 +74,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		// TODO consider deleting those that are not in a channel?
 	}
 
-	fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE user_id = $1 AND guild_id = $2")
@@ -83,7 +85,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE guild_id = $1")
@@ -93,7 +95,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE shard_index = $1")
@@ -103,7 +105,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun countVoiceStates(): Mono<Long> {
+	override fun countVoiceStates(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state")
@@ -112,7 +114,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun countVoiceStatesInGuild(guildId: Long): Mono<Long> {
+	override fun countVoiceStatesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state WHERE guild_id = $1")
@@ -122,7 +124,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun countVoiceStatesInChannel(guildId: Long, channelId: Long): Mono<Long> {
+	override fun countVoiceStatesInChannel(guildId: Long, channelId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state WHERE guild_id = $1 AND channel_id = $2")
@@ -133,7 +135,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun getVoiceStates(): Flux<VoiceStateData> {
+	override fun getVoiceStates(): Flux<VoiceStateData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state")
@@ -142,7 +144,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun getVoiceStatesInChannel(guildId: Long, channelId: Long): Flux<VoiceStateData> {
+	override fun getVoiceStatesInChannel(guildId: Long, channelId: Long): Flux<VoiceStateData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1 AND channel_id = $2")
@@ -153,7 +155,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun getVoiceStatesInGuild(guildId: Long): Flux<VoiceStateData> {
+	override fun getVoiceStatesInGuild(guildId: Long): Flux<VoiceStateData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1")
@@ -163,7 +165,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	fun getVoiceStateById(guildId: Long, userId: Long): Mono<VoiceStateData> {
+	override fun getVoiceStateById(guildId: Long, userId: Long): Mono<VoiceStateData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1 AND user_id = $2")

@@ -15,16 +15,18 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
+import dev.capybaralabs.d4j.store.common.CommonDataAccessor
+import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresChannelRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresEmojiRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresGuildRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresMemberRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresMessageRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresPresenceRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresRepositories
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresRoleRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresUserRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresVoiceStateRepository
-import dev.capybaralabs.d4j.store.postgres.repository.Repositories
 import discord4j.common.store.api.layout.DataAccessor
 import discord4j.common.store.api.layout.GatewayDataUpdater
 import discord4j.common.store.api.layout.StoreLayout
@@ -36,6 +38,14 @@ import org.slf4j.LoggerFactory
 
 /**
  * TODO
+ *
+ *
+ * The `.flatMap(PostgresqlResult::getRowsUpdated)`
+ * lines are necessary because of https://github.com/pgjdbc/r2dbc-postgresql/issues/194#issuecomment-557443260
+ *
+ *
+ * Ids have to saved as TEXT, because JSONB does not support deleting numeric array entries (easily)
+ *
  */
 class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
 
@@ -48,7 +58,7 @@ class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
 
 	// TODO implement versioning / migrations
 	// TODO avoid blocking calls (db creations) in constructor?
-	private val repositories = Repositories(
+	private val repositories = PostgresRepositories(
 		connectionFactory,
 		PostgresChannelRepository(connectionFactory, serde),
 		PostgresEmojiRepository(connectionFactory, serde),
@@ -61,8 +71,8 @@ class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
 		PostgresVoiceStateRepository(connectionFactory, serde),
 	)
 
-	private val postgresDataAccessor: PostgresDataAccessor = PostgresDataAccessor(repositories)
-	private val postgresGatewayDataUpdater: PostgresGatewayDataUpdater = PostgresGatewayDataUpdater(repositories)
+	private val postgresDataAccessor: CommonDataAccessor = CommonDataAccessor(repositories)
+	private val postgresGatewayDataUpdater: CommonGatewayDataUpdater = CommonGatewayDataUpdater(repositories)
 
 	override fun getDataAccessor(): DataAccessor {
 		return postgresDataAccessor

@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.repository.UserRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -16,7 +17,8 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the user table
  */
-internal class PostgresUserRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) {
+internal class PostgresUserRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
+	UserRepository {
 
 
 	init {
@@ -33,11 +35,11 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}.blockLast()
 	}
 
-	fun save(user: UserData): Mono<Void> {
+	override fun save(user: UserData): Mono<Void> {
 		return saveAll(listOf(user)).then()
 	}
 
-	fun saveAll(users: List<UserData>): Flux<Int> {
+	override fun saveAll(users: List<UserData>): Flux<Int> {
 		if (users.isEmpty()) {
 			return Flux.empty()
 		}
@@ -61,7 +63,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun deleteById(userId: Long): Mono<Int> {
+	override fun deleteById(userId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_user WHERE user_id = $1")
@@ -72,7 +74,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 	}
 
 
-	fun countUsers(): Mono<Long> {
+	override fun countUsers(): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_user")
@@ -81,7 +83,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun getUsers(): Flux<UserData> {
+	override fun getUsers(): Flux<UserData> {
 		return Flux.defer {
 			withConnectionMany(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_user")
@@ -90,7 +92,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	fun getUserById(userId: Long): Mono<UserData> {
+	override fun getUserById(userId: Long): Mono<UserData> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("SELECT data FROM d4j_discord_user WHERE user_id = $1")

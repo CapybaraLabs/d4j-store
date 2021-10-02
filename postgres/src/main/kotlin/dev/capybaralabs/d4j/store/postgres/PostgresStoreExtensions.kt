@@ -1,13 +1,9 @@
 package dev.capybaralabs.d4j.store.postgres
 
-import discord4j.discordjson.json.EmojiData
-import discord4j.discordjson.json.ReactionData
-import discord4j.discordjson.possible.Possible
 import io.r2dbc.spi.Connection
 import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.Result
 import io.r2dbc.spi.Statement
-import java.util.Optional
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -69,30 +65,4 @@ internal fun <E> Publisher<out Result>.deserializeManyFromData(clazz: Class<E>, 
  */
 internal fun <E> Publisher<out Result>.deserializeOneFromData(clazz: Class<E>, serde: PostgresSerde): Mono<E> {
 	return deserializeManyFromData(clazz, serde).toMono()  // single statement and row expected
-}
-
-
-/**
- * Collapse a nested Possible<Optional<>> into a Possible
- */
-internal fun <T> Possible<Optional<T>>.collapse(): Possible<T> =
-	toOptional().flatMap { it }.map { Possible.of(it) }.orElse(Possible.absent())
-
-
-/**
- * Sum elements distinctly into a list.
- */
-internal fun <T> sumDistinct(original: Collection<T>, elements: Collection<T>): List<T> {
-	val result = original.toMutableSet()
-	result.addAll(elements)
-	return result.toList()
-}
-
-/**
- * Equality for ReactionData & EmojiData
- */
-internal fun ReactionData.equalsEmoji(emojiData: EmojiData): Boolean {
-	val emojiHasId = emojiData.id().isPresent
-	return emojiHasId && emojiData.id() == this.emoji().id()
-		|| !emojiHasId && emojiData.name() == this.emoji().name()
 }
