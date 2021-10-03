@@ -1,21 +1,35 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
 import dev.capybaralabs.d4j.store.common.repository.MessageRepository
+import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MessageData
+import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisMessageRepository : MessageRepository {
+class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
+
+	private val hash = hash("message")
+	private val hashOps = factory.createRedisHashOperations<String, Long, MessageData>()
+
 	override fun save(message: MessageData, shardIndex: Int): Mono<Void> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.put(hash, message.id().asLong(), message).then()
+		}
 	}
 
 	override fun delete(messageId: Long): Mono<Int> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.remove(hash, messageId)
+				.map { toIntExact(it) }
+		}
 	}
 
 	override fun deleteByIds(messageIds: List<Long>): Mono<Int> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.remove(hash, *messageIds.toTypedArray())
+				.map { toIntExact(it) }
+		}
 	}
 
 	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
@@ -31,7 +45,9 @@ class RedisMessageRepository : MessageRepository {
 	}
 
 	override fun countMessages(): Mono<Long> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.size(hash)
+		}
 	}
 
 	override fun countMessagesInChannel(channelId: Long): Mono<Long> {
@@ -39,7 +55,9 @@ class RedisMessageRepository : MessageRepository {
 	}
 
 	override fun getMessages(): Flux<MessageData> {
-		TODO("Not yet implemented")
+		return Flux.defer {
+			hashOps.values(hash)
+		}
 	}
 
 	override fun getMessagesInChannel(channelId: Long): Flux<MessageData> {
@@ -47,10 +65,15 @@ class RedisMessageRepository : MessageRepository {
 	}
 
 	override fun getMessageById(messageId: Long): Mono<MessageData> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.get(hash, messageId)
+		}
 	}
 
 	override fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
-		TODO("Not yet implemented")
+		return Flux.defer {
+			hashOps.multiGet(hash, messageIds)
+				.flatMapIterable { it }
+		}
 	}
 }

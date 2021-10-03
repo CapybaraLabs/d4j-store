@@ -17,20 +17,20 @@ import discord4j.common.store.api.layout.GatewayDataUpdater
 import discord4j.common.store.api.layout.StoreLayout
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory
 
-class RedisStoreLayout(connectionFactory: ReactiveRedisConnectionFactory) : StoreLayout {
+class RedisStoreLayout(connectionFactory: ReactiveRedisConnectionFactory, prefix: String = "d4j_capy") : StoreLayout {
 
 	private val factory = RedisFactory(connectionFactory, Serde.objectMapper())
 
 	private val repositories = RedisRepositories(
-		RedisChannelRepository(factory),
-		RedisEmojiRepository(),
-		RedisGuildRepository(),
-		RedisMemberRepository(),
-		RedisMessageRepository(),
-		RedisPresenceRepository(),
-		RedisRoleRepository(),
-		RedisUserRepository(),
-		RedisVoiceStateRepository(),
+		RedisChannelRepository(prefix, factory),
+		RedisEmojiRepository(prefix, factory),
+		RedisGuildRepository(prefix, factory),
+		RedisMemberRepository(prefix, factory),
+		RedisMessageRepository(prefix, factory),
+		RedisPresenceRepository(prefix, factory),
+		RedisRoleRepository(prefix, factory),
+		RedisUserRepository(prefix, factory),
+		RedisVoiceStateRepository(prefix, factory),
 	)
 
 	private val redisDataAccessor: CommonDataAccessor = CommonDataAccessor(repositories)

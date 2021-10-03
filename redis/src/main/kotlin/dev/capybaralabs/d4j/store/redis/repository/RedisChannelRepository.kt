@@ -8,21 +8,19 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toFlux
 
-internal class RedisChannelRepository(factory: RedisFactory) : ChannelRepository {
+internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix),
+	ChannelRepository {
 
-	private val channelHash = "channel"
-
+	private val hash = hash("channel")
 	private val hashOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
 	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
-		return Mono.defer {
-			hashOps.put(channelHash, channel.id().asLong(), channel).then()
-		}
+		return saveAll(listOf(channel), shardIndex).then()
 	}
 
 	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
 		return Flux.defer {
-			hashOps.putAll(channelHash, channels.associateBy { it.id().asLong() })
+			hashOps.putAll(hash, channels.associateBy { it.id().asLong() })
 				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
 				.toFlux()
 		}
@@ -30,14 +28,14 @@ internal class RedisChannelRepository(factory: RedisFactory) : ChannelRepository
 
 	override fun delete(channelId: Long): Mono<Int> {
 		return Mono.defer {
-			hashOps.remove(channelHash, channelId)
+			hashOps.remove(hash, channelId)
 				.map { toIntExact(it) }
 		}
 	}
 
 	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
 		return Mono.defer {
-			hashOps.remove(channelHash, *channelIds.toTypedArray())
+			hashOps.remove(hash, *channelIds.toTypedArray())
 				.map { toIntExact(it) }
 		}
 	}
@@ -49,24 +47,24 @@ internal class RedisChannelRepository(factory: RedisFactory) : ChannelRepository
 
 	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(channelHash)
+			hashOps.size(hash)
 		}
 	}
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
-		// Ask the guild about it, lol
+		// Ask the guild about it
 		TODO("Not yet implemented")
 	}
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
-			hashOps.get(channelHash, channelId)
+			hashOps.get(hash, channelId)
 		}
 	}
 
 	override fun getChannels(): Flux<ChannelData> {
 		return Flux.defer {
-			hashOps.values(channelHash)
+			hashOps.values(hash)
 		}
 	}
 

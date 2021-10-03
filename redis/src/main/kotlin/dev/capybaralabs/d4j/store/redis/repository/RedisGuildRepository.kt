@@ -1,32 +1,50 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
 import dev.capybaralabs.d4j.store.common.repository.GuildRepository
+import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.GuildData
+import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisGuildRepository : GuildRepository {
+class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), GuildRepository {
+
+	private val hash = hash("guild")
+	private val hashOps = factory.createRedisHashOperations<String, Long, GuildData>()
+
 	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.put(hash, guild.id().asLong(), guild).then()
+		}
 	}
 
 	override fun delete(guildId: Long): Mono<Int> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.remove(hash, guildId)
+				.map { toIntExact(it) }
+		}
 	}
 
 	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+		// look up ids from shard repo
 		TODO("Not yet implemented")
 	}
 
 	override fun countGuilds(): Mono<Long> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.size(hash)
+		}
 	}
 
 	override fun getGuildById(guildId: Long): Mono<GuildData> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			hashOps.get(hash, guildId)
+		}
 	}
 
 	override fun getGuilds(): Flux<GuildData> {
-		TODO("Not yet implemented")
+		return Flux.defer {
+			hashOps.values(hash)
+		}
 	}
 }

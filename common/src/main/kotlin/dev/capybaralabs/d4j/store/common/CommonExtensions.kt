@@ -29,3 +29,8 @@ internal fun ReactionData.equalsEmoji(emojiData: EmojiData): Boolean {
 	return emojiHasId && emojiData.id() == this.emoji().id()
 		|| !emojiHasId && emojiData.name() == this.emoji().name()
 }
+
+
+fun <T> Possible<T>.isPresent(): Boolean {
+	return !isAbsent
+}

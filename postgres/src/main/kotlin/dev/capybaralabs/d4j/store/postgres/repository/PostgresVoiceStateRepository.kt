@@ -47,6 +47,9 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 
 		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent }
+		if (voiceStatesInChannels.isEmpty()) {
+			return Flux.empty()
+		}
 
 		return Flux.defer {
 			withConnectionMany(factory) {
