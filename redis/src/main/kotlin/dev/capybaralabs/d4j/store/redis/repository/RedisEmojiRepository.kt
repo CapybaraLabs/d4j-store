@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono
 
 class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), EmojiRepository {
 
-	private val hash = hash("emoji")
+	private val hash = key("emoji")
 	private val hashOps = factory.createRedisHashOperations<String, Long, EmojiData>()
 
 	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {

@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono
 
 class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
 
-	private val hash = hash("voicestate")
+	private val hash = key("voicestate")
 	private val hashOps = factory.createRedisHashOperations<String, String, VoiceStateData>()
 
 	private fun voiceStateKey(guildId: Long, userId: Long): String {

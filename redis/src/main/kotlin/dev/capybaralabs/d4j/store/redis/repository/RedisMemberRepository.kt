@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono
 
 class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
 
-	private val hash = hash("member")
+	private val hash = key("member")
 	private val hashOps = factory.createRedisHashOperations<String, String, MemberData>()
 
 	private fun memberKey(guildId: Long, userId: Long): String {

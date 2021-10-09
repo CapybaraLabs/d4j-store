@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono
 
 class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), PresenceRepository {
 
-	private val hash = hash("presence")
+	private val hash = key("presence")
 	private val hashOps = factory.createRedisHashOperations<String, String, PresenceData>()
 
 	private fun presenceKey(guildId: Long, userId: Long): String {

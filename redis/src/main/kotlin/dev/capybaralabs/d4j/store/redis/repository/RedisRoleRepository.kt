@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono
 
 class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), RoleRepository {
 
-	private val hash = hash("role")
+	private val hash = key("role")
 	private val hashOps = factory.createRedisHashOperations<String, Long, RoleData>()
 
 	override fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {

@@ -1,72 +1,113 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
+import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
 import java.lang.StrictMath.toIntExact
+import org.springframework.data.domain.Range
+import org.springframework.data.redis.core.ZSetOperations.TypedTuple
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix),
 	ChannelRepository {
 
-	private val hash = hash("channel")
-	private val hashOps = factory.createRedisHashOperations<String, Long, ChannelData>()
+	private val channelKey = key("channel")
+	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
+
+	private val shardIndexKey = key("channel:shard-index")
+	private val shardOps = factory.createRedisSortedSetOperations<String, Long>()
+
+	private val guildIndexPrefix = key("channel:guild-index")
+	private val guildOps = factory.createRedisSetOperations<String, Long>()
+
+	private fun guildIndexKey(guildId: Long): String {
+		return "$guildIndexPrefix:$guildId"
+	}
 
 	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardIndex)
 	}
 
 	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Mono<Void> {
+		// TODO LUA script for atomicity
 		return Mono.defer {
-			hashOps.putAll(hash, channels.associateBy { it.id().asLong() }).then()
+			val shardTuples = channels.map { TypedTuple.of(it.id().asLong(), shardIndex.toDouble()) }
+			val addToShardIndex = shardOps.addAll(shardIndexKey, shardTuples)
+
+			val addToGuildIndex = Flux.fromIterable(
+				channels
+					.filter { it.guildId().isPresent() }
+					.groupBy { it.guildId().get().asLong() }
+					.map {
+						guildOps.add(
+							guildIndexKey(it.key),
+							*it.value.map { ch -> ch.id().asLong() }.toTypedArray()
+						)
+					}
+			).flatMap { it }
+
+			val saveChannels = channelOps.putAll(channelKey, channels.associateBy { it.id().asLong() })
+
+
+			Mono.`when`(addToShardIndex, addToGuildIndex, saveChannels)
 		}
 	}
 
 	override fun delete(channelId: Long): Mono<Int> {
-		return Mono.defer {
-			hashOps.remove(hash, channelId)
-				.map { toIntExact(it) }
-		}
+		return deleteByIds(listOf(channelId))
 	}
 
 	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
 		return Mono.defer {
-			hashOps.remove(hash, *channelIds.toTypedArray())
+			channelOps.remove(channelKey, *channelIds.toTypedArray())
 				.map { toIntExact(it) }
 		}
 	}
 
 	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
-		// look up ids from shard repo
-		TODO("Not yet implemented")
+		return Mono.defer {
+			val shardRange = Range.just(shardIndex.toDouble())
+			shardOps.rangeByScore(shardIndexKey, shardRange)
+				.collectList()
+				.flatMap { ids ->
+					shardOps.removeRangeByScore(shardIndexKey, shardRange)
+						.flatMap { deleteByIds(ids) } // TODO LUA script for atomicity
+				}
+		}
 	}
 
 	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			channelOps.size(channelKey)
 		}
 	}
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
-		// Ask the guild about it
-		TODO("Not yet implemented")
+		return Mono.defer {
+			guildOps.size(guildIndexKey(guildId))
+		}
 	}
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
-			hashOps.get(hash, channelId)
+			channelOps.get(channelKey, channelId)
 		}
 	}
 
 	override fun getChannels(): Flux<ChannelData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			channelOps.values(channelKey)
 		}
 	}
 
 	override fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
-		// look up ids from guild repo
-		TODO("Not yet implemented")
+		return Flux.defer {
+			guildOps.members(guildIndexKey(guildId))
+				.collectList()
+				.flatMap { channelOps.multiGet(channelKey, it) }
+				.flatMapMany { Flux.fromIterable(it) }
+		}
 	}
 }

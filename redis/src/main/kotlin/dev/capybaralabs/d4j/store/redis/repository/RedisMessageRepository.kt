@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono
 
 class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
 
-	private val hash = hash("message")
+	private val hash = key("message")
 	private val hashOps = factory.createRedisHashOperations<String, Long, MessageData>()
 
 	override fun save(message: MessageData, shardIndex: Int): Mono<Void> {

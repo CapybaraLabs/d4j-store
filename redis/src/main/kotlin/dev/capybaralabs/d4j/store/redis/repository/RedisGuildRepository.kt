@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono
 
 class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), GuildRepository {
 
-	private val hash = hash("guild")
+	private val hash = key("guild")
 	private val hashOps = factory.createRedisHashOperations<String, Long, GuildData>()
 
 	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
