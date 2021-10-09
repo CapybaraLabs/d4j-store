@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.MemberRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -33,7 +33,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 					CONSTRAINT d4j_discord_member_pkey PRIMARY KEY (guild_id, user_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -42,13 +42,13 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Mono<Void> {
 		if (members.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_member VALUES ($1, $2, $3::jsonb, $4)
@@ -65,7 +65,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 						.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

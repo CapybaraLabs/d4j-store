@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.PresenceRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,7 +32,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 					CONSTRAINT d4j_discord_presence_pkey PRIMARY KEY (guild_id, user_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -41,13 +41,13 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Mono<Void> {
 		if (presences.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3::jsonb, $4)
@@ -63,7 +63,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 						.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

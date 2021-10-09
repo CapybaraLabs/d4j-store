@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,22 +32,22 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					CONSTRAINT d4j_discord_channel_pkey PRIMARY KEY (channel_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
 	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
 		return Mono.defer {
-			saveAll(listOf(channel), shardIndex).then()
+			saveAll(listOf(channel), shardIndex)
 		}
 	}
 
-	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Mono<Void> {
 		if (channels.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
-		return Flux.defer {
-			withConnectionMany(factory) { connection ->
+		return Mono.defer {
+			withConnection(factory) { connection ->
 				var statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3::jsonb, $4)
@@ -71,7 +71,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					statement.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

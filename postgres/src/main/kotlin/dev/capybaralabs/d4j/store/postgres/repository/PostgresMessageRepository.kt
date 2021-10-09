@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.MessageRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,7 +32,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 					CONSTRAINT d4j_discord_message_pkey PRIMARY KEY (message_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 

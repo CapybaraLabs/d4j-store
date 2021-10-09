@@ -5,7 +5,6 @@ import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MemberData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
 
@@ -17,14 +16,12 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 	}
 
 	override fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(member), shardIndex).then()
+		return saveAll(guildId, listOf(member), shardIndex)
 	}
 
-	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Flux<Int> {
-		return Flux.defer {
-			hashOps.putAll(hash, members.associateBy { memberKey(guildId, it.user().id().asLong()) })
-				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
-				.toFlux()
+	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Mono<Void> {
+		return Mono.defer {
+			hashOps.putAll(hash, members.associateBy { memberKey(guildId, it.user().id().asLong()) }).then()
 		}
 
 	}

@@ -6,7 +6,6 @@ import discord4j.discordjson.json.PresenceData
 import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), PresenceRepository {
 
@@ -18,14 +17,12 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 	}
 
 	override fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(presence), shardIndex).then()
+		return saveAll(guildId, listOf(presence), shardIndex)
 	}
 
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
-		return Flux.defer {
-			hashOps.putAll(hash, presences.associateBy { presenceKey(guildId, it.user().id().asLong()) })
-				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
-				.toFlux()
+	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Mono<Void> {
+		return Mono.defer {
+			hashOps.putAll(hash, presences.associateBy { presenceKey(guildId, it.user().id().asLong()) }).then()
 		}
 	}
 

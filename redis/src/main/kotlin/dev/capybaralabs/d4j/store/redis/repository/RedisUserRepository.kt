@@ -6,7 +6,6 @@ import discord4j.discordjson.json.UserData
 import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), UserRepository {
 
@@ -14,14 +13,12 @@ class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	private val hashOps = factory.createRedisHashOperations<String, Long, UserData>()
 
 	override fun save(user: UserData): Mono<Void> {
-		return saveAll(listOf(user)).then()
+		return saveAll(listOf(user))
 	}
 
-	override fun saveAll(users: List<UserData>): Flux<Int> {
-		return Flux.defer {
-			hashOps.putAll(hash, users.associateBy { it.id().asLong() })
-				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
-				.toFlux()
+	override fun saveAll(users: List<UserData>): Mono<Void> {
+		return Mono.defer {
+			hashOps.putAll(hash, users.associateBy { it.id().asLong() }).then()
 		}
 	}
 

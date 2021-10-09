@@ -6,7 +6,6 @@ import discord4j.discordjson.json.EmojiData
 import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), EmojiRepository {
 
@@ -14,19 +13,17 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	private val hashOps = factory.createRedisHashOperations<String, Long, EmojiData>()
 
 	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardIndex).then()
+		return saveAll(guildId, listOf(emoji), shardIndex)
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Mono<Void> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			hashOps.putAll(hash, emojis.associateBy { it.id().get().asLong() })
-				.map { if (it) 1 else 0 }
-				.toFlux()
+		return Mono.defer {
+			hashOps.putAll(hash, emojis.associateBy { it.id().get().asLong() }).then()
 		}
 	}
 

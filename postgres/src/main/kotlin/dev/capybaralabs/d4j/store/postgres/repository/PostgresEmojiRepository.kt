@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,7 +32,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 					CONSTRAINT d4j_discord_emoji_pkey PRIMARY KEY (emoji_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -40,14 +40,14 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		return saveAll(guildId, listOf(emoji), shardIndex).then()
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Mono<Void> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3::jsonb, $4)
@@ -63,7 +63,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 						.bind("$4", shardIndex)
 						.add()
 				}
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.RoleRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,7 +32,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -40,13 +40,13 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		return saveAll(guildId, listOf(role), shardIndex).then()
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Mono<Void> {
 		if (roles.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
@@ -62,7 +62,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 						.bind("$4", shardIndex)
 						.add()
 				}
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

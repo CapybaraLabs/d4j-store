@@ -4,7 +4,7 @@ import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -33,7 +33,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 					CONSTRAINT d4j_discord_voice_state_pkey PRIMARY KEY (user_id, channel_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -41,18 +41,18 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		return saveAll(listOf(voiceState), shardIndex).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Mono<Void> {
 		if (voiceStates.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
 		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent }
 		if (voiceStatesInChannels.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4::jsonb, $5)
@@ -70,7 +70,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 						.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 

@@ -7,7 +7,6 @@ import discord4j.discordjson.json.VoiceStateData
 import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
 
@@ -22,23 +21,22 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 		return saveAll(listOf(voiceState), shardIndex).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Mono<Void> {
 		if (voiceStates.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
 		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent && it.guildId().isPresent() }
 		if (voiceStatesInChannels.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
+		return Mono.defer {
 			hashOps.putAll(hash, voiceStatesInChannels
 				.associateBy {
 					voiceStateKey(it.guildId().get().asLong(), it.userId().asLong())
 				})
-				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
-				.toFlux()
+				.then()
 		}
 
 	}

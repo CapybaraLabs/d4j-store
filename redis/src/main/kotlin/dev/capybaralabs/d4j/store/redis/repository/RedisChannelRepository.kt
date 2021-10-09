@@ -6,7 +6,6 @@ import discord4j.discordjson.json.ChannelData
 import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toFlux
 
 internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix),
 	ChannelRepository {
@@ -15,14 +14,12 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val hashOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
 	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
-		return saveAll(listOf(channel), shardIndex).then()
+		return saveAll(listOf(channel), shardIndex)
 	}
 
-	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
-		return Flux.defer {
-			hashOps.putAll(hash, channels.associateBy { it.id().asLong() })
-				.map { if (it) 1 else 0 } // TODO rethink the signature of the method, it doesnt really make sense here
-				.toFlux()
+	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Mono<Void> {
+		return Mono.defer {
+			hashOps.putAll(hash, channels.associateBy { it.id().asLong() }).then()
 		}
 	}
 
