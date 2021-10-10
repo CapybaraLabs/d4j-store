@@ -37,12 +37,12 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(member), shardIndex).then()
+	override fun save(guildId: Long, member: MemberData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(member), shardId).then()
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, members: List<MemberData>, shardId: Int): Mono<Void> {
 		if (members.isEmpty()) {
 			return Mono.empty()
 		}
@@ -61,7 +61,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 						.bind("$1", member.user().id().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(member))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
 
@@ -92,11 +92,11 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_member WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

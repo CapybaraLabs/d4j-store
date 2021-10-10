@@ -12,7 +12,7 @@ class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	private val hash = key("guild")
 	private val hashOps = factory.createRedisHashOperations<String, Long, GuildData>()
 
-	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
+	override fun save(guild: GuildData, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			hashOps.put(hash, guild.id().asLong(), guild).then()
 		}
@@ -25,7 +25,7 @@ class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisReposit
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		// look up ids from shard repo
 		TODO("Not yet implemented")
 	}

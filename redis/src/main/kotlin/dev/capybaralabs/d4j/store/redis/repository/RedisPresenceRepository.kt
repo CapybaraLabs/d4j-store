@@ -16,11 +16,11 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 		return "$guildId:$userId"
 	}
 
-	override fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(presence), shardIndex)
+	override fun save(guildId: Long, presence: PresenceData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(presence), shardId)
 	}
 
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			hashOps.putAll(hash, presences.associateBy { presenceKey(guildId, it.user().id().asLong()) }).then()
 		}
@@ -37,7 +37,7 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		TODO("Not yet implemented")
 	}
 

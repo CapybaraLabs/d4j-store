@@ -20,7 +20,7 @@ internal class PostgresRepositories internal constructor(
 ) : Repositories {
 
 	// TODO find a way to safely write across multiple tables
-	override fun deleteOrphanedUsers(shardIndex: Int): Mono<Long> {
+	override fun deleteOrphanedUsers(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) { connection ->
 				connection.createStatement(
@@ -38,7 +38,7 @@ internal class PostgresRepositories internal constructor(
 						WHERE user_id IN (SELECT user_id FROM onThisShard) AND user_id NOT IN (SELECT user_id FROM onOtherShards)
 					""".trimIndent()
 				)
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.execute().mapToCount()
 			}
 		}

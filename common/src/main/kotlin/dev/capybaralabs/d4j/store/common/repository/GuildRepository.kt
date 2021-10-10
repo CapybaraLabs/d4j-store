@@ -5,10 +5,10 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface GuildRepository {
-	fun save(guild: GuildData, shardIndex: Int): Mono<Void>
+	fun save(guild: GuildData, shardId: Int): Mono<Void>
 
 	fun delete(guildId: Long): Mono<Int>
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int>
+	fun deleteByShardId(shardId: Int): Mono<Int>
 
 	fun countGuilds(): Mono<Long>
 

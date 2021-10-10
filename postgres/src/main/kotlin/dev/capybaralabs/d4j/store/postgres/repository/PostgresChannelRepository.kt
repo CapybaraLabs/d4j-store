@@ -36,13 +36,13 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}.blockLast()
 	}
 
-	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
+	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			saveAll(listOf(channel), shardIndex)
+			saveAll(listOf(channel), shardId)
 		}
 	}
 
-	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		if (channels.isEmpty()) {
 			return Mono.empty()
 		}
@@ -66,7 +66,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					}
 					statement
 						.bind("$3", serde.serializeToString(channel))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 
 					statement.add()
 				}
@@ -97,11 +97,11 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 	}
 
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

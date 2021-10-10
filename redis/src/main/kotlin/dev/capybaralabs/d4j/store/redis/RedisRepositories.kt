@@ -24,7 +24,7 @@ class RedisRepositories(
 	override val voiceStates: VoiceStateRepository
 ) : Repositories {
 
-	override fun deleteOrphanedUsers(shardIndex: Int): Mono<Long> {
+	override fun deleteOrphanedUsers(shardId: Int): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 }

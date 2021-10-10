@@ -12,7 +12,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	private val hash = key("message")
 	private val hashOps = factory.createRedisHashOperations<String, Long, MessageData>()
 
-	override fun save(message: MessageData, shardIndex: Int): Mono<Void> {
+	override fun save(message: MessageData, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			hashOps.put(hash, message.id().asLong(), message).then()
 		}
@@ -32,7 +32,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		TODO("Not yet implemented")
 	}
 

@@ -36,11 +36,11 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardIndex).then()
+	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(role), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
 		if (roles.isEmpty()) {
 			return Mono.empty()
 		}
@@ -59,7 +59,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 						.bind("$1", role.id().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(role))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
 				statement.executeConsumingAll().then()
@@ -88,11 +88,11 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

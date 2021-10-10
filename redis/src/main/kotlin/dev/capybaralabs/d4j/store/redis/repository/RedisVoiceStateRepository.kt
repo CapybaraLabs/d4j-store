@@ -17,11 +17,11 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 		return "$guildId:$userId"
 	}
 
-	override fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
-		return saveAll(listOf(voiceState), shardIndex).then()
+	override fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(voiceState), shardId).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void> {
 		if (voiceStates.isEmpty()) {
 			return Mono.empty()
 		}
@@ -52,7 +52,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		TODO("Not yet implemented")
 	}
 

@@ -11,11 +11,11 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	private val hash = key("role")
 	private val hashOps = factory.createRedisHashOperations<String, Long, RoleData>()
 
-	override fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardIndex)
+	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(role), shardId)
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			hashOps.putAll(hash, roles.associateBy { it.id().asLong() }).then()
 		}
@@ -35,7 +35,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		TODO("Not yet implemented")
 	}
 

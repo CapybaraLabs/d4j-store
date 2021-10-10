@@ -26,14 +26,14 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		return "$guildIndexPrefix:$guildId"
 	}
 
-	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
-		return saveAll(listOf(channel), shardIndex)
+	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(channel), shardId)
 	}
 
-	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		// TODO LUA script for atomicity
 		return Mono.defer {
-			val shardTuples = channels.map { TypedTuple.of(it.id().asLong(), shardIndex.toDouble()) }
+			val shardTuples = channels.map { TypedTuple.of(it.id().asLong(), shardId.toDouble()) }
 			val addToShardIndex = shardOps.addAll(shardIndexKey, shardTuples)
 
 			val addToGuildIndex = Flux.fromIterable(
@@ -66,9 +66,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
-			val shardRange = Range.just(shardIndex.toDouble())
+			val shardRange = Range.just(shardId.toDouble())
 			shardOps.rangeByScore(shardIndexKey, shardRange)
 				.collectList()
 				.flatMap { ids ->

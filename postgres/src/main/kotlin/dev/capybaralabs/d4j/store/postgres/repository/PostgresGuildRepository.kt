@@ -35,7 +35,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		}.blockLast()
 	}
 
-	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
+	override fun save(guild: GuildData, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement(
@@ -46,7 +46,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 				)
 					.bind("$1", guild.id().asLong())
 					.bind("$2", serde.serializeToString(guild))
-					.bind("$3", shardIndex)
+					.bind("$3", shardId)
 					.executeConsumingSingle().then()
 			}
 		}
@@ -75,11 +75,11 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 //		}
 //	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

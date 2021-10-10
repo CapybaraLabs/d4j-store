@@ -36,7 +36,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}.blockLast()
 	}
 
-	override fun save(message: MessageData, shardIndex: Int): Mono<Void> {
+	override fun save(message: MessageData, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement(
@@ -48,7 +48,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 					.bind("$1", message.id().asLong())
 					.bind("$2", message.channelId().asLong())
 					.bind("$3", serde.serializeToString(message))
-					.bind("$4", shardIndex)
+					.bind("$4", shardId)
 					.executeConsumingSingle().then()
 			}
 		}
@@ -74,11 +74,11 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

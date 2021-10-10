@@ -12,11 +12,11 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	private val hash = key("emoji")
 	private val hashOps = factory.createRedisHashOperations<String, Long, EmojiData>()
 
-	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardIndex)
+	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(emoji), shardId)
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
 			return Mono.empty()
@@ -34,7 +34,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		// look up ids from shard repo
 		TODO("Not yet implemented")
 	}

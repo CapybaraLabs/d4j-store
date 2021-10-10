@@ -15,11 +15,11 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 		return "$guildId:$userId"
 	}
 
-	override fun save(guildId: Long, member: MemberData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(member), shardIndex)
+	override fun save(guildId: Long, member: MemberData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(member), shardId)
 	}
 
-	override fun saveAll(guildId: Long, members: List<MemberData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, members: List<MemberData>, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			hashOps.putAll(hash, members.associateBy { memberKey(guildId, it.user().id().asLong()) }).then()
 		}
@@ -38,7 +38,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		// ask shard about the ids
 		TODO("Not yet implemented")
 	}

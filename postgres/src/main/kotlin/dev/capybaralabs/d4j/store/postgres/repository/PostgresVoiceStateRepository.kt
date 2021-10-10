@@ -37,11 +37,11 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}.blockLast()
 	}
 
-	override fun save(voiceState: VoiceStateData, shardIndex: Int): Mono<Void> {
-		return saveAll(listOf(voiceState), shardIndex).then()
+	override fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(voiceState), shardId).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void> {
 		if (voiceStates.isEmpty()) {
 			return Mono.empty()
 		}
@@ -66,7 +66,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 						.bind("$2", voiceState.channelId().get().asLong())
 						.bind("$3", voiceState.guildId().get().asLong()) // TODO check if present or pass as param
 						.bind("$4", serde.serializeToString(voiceState))
-						.bind("$5", shardIndex)
+						.bind("$5", shardId)
 						.add()
 				}
 
@@ -98,11 +98,11 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}

@@ -5,12 +5,12 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface RoleRepository {
-	fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void>
-	fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Mono<Void>
+	fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void>
+	fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void>
 
 	fun deleteById(roleId: Long): Mono<Int>
 	fun deleteByIds(roleIds: List<Long>): Mono<Int>
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int>
+	fun deleteByShardId(shardId: Int): Mono<Int>
 
 	fun countRoles(): Mono<Long>
 	fun countRolesInGuild(guildId: Long): Mono<Long>

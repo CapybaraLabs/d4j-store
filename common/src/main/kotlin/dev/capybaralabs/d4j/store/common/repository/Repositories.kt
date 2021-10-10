@@ -13,5 +13,5 @@ interface Repositories {
 	val users: UserRepository
 	val voiceStates: VoiceStateRepository
 
-	fun deleteOrphanedUsers(shardIndex: Int): Mono<Long>
+	fun deleteOrphanedUsers(shardId: Int): Mono<Long>
 }

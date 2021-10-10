@@ -36,11 +36,11 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardIndex).then()
+	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(emoji), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Mono<Void> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
 			return Mono.empty()
@@ -60,7 +60,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 						.bind("$1", guildEmoji.id().get().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(guildEmoji))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
 				statement.executeConsumingAll().then()
@@ -79,11 +79,11 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 	}
 
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE shard_index = $1")
-					.bind("$1", shardIndex)
+					.bind("$1", shardId)
 					.executeConsumingSingle()
 			}
 		}
