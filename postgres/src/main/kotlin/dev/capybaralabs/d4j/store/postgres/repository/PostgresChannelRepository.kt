@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -76,7 +77,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun delete(channelId: Long): Mono<Int> {
+	override fun delete(channelId: Long, guildId: Long?): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = $1")
@@ -86,7 +87,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Int> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = ANY($1)")
@@ -97,12 +98,12 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 	}
 
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE shard_index = $1")
 					.bind("$1", shardId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

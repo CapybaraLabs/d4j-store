@@ -1,82 +1,114 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
+import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
+import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
 import java.lang.StrictMath.toIntExact
-import org.springframework.data.domain.Range
-import org.springframework.data.redis.core.ZSetOperations.TypedTuple
+import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix),
-	ChannelRepository {
+internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), ChannelRepository {
+
+	companion object {
+		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
+	}
 
 	private val channelKey = key("channel")
 	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
-	private val shardIndexKey = key("channel:shard-index")
-	private val shardOps = factory.createRedisSortedSetOperations<String, Long>()
-
-	private val guildIndexPrefix = key("channel:guild-index")
-	private val guildOps = factory.createRedisSetOperations<String, Long>()
-
-	private fun guildIndexKey(guildId: Long): String {
-		return "$guildIndexPrefix:$guildId"
-	}
+	private val shardIndex = TwoWayIndex("channel:shard-index", factory)
+	private val guildIndex = OneWayIndex("channel:guild-index", factory)
+	private val gShardIndex = TwoWayIndex("channel:guild-shard-index", factory)
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
 	}
 
 	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
-		// TODO LUA script for atomicity
+		// TODO consider LUA script for atomicity
 		return Mono.defer {
-			val shardTuples = channels.map { TypedTuple.of(it.id().asLong(), shardId.toDouble()) }
-			val addToShardIndex = shardOps.addAll(shardIndexKey, shardTuples)
+			val addToShardIndex = shardIndex.addElements(shardId, channels.map { it.id().asLong() })
 
 			val addToGuildIndex = Flux.fromIterable(
 				channels
 					.filter { it.guildId().isPresent() }
 					.groupBy { it.guildId().get().asLong() }
-					.map {
-						guildOps.add(
-							guildIndexKey(it.key),
-							*it.value.map { ch -> ch.id().asLong() }.toTypedArray()
-						)
-					}
+					.map { guildIndex.addElements(it.key, it.value.map { ch -> ch.id().asLong() }) }
 			).flatMap { it }
+
+			val guilIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
 
 			val saveChannels = channelOps.putAll(channelKey, channels.associateBy { it.id().asLong() })
 
 
-			Mono.`when`(addToShardIndex, addToGuildIndex, saveChannels)
+			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, saveChannels)
 		}
 	}
 
-	override fun delete(channelId: Long): Mono<Int> {
-		return deleteByIds(listOf(channelId))
-	}
 
-	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
+	override fun delete(channelId: Long, guildId: Long?): Mono<Int> {
 		return Mono.defer {
-			channelOps.remove(channelKey, *channelIds.toTypedArray())
-				.map { toIntExact(it) }
+			val removeChannel = channelOps.remove(channelKey, channelId)
+			val removeFromShardIndex = shardIndex.removeElements(listOf(channelId))
+			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, listOf(channelId)) else Mono.empty()
+
+			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
+				.then(removeChannel.map { toIntExact(it) })
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Int> {
+		// TODO consider LUA script for atomicity
 		return Mono.defer {
-			val shardRange = Range.just(shardId.toDouble())
-			shardOps.rangeByScore(shardIndexKey, shardRange)
-				.collectList()
-				.flatMap { ids ->
-					shardOps.removeRangeByScore(shardIndexKey, shardRange)
-						.flatMap { deleteByIds(ids) } // TODO LUA script for atomicity
+			guildIndex.getElementsInGroup(guildId).collectList()
+				.flatMap { channelIdsInGuild ->
+					if (channelIds != channelIdsInGuild) {
+						log.warn(
+							"Channel guild index deviates from channel ids parameter: {} vs {}",
+							channelIdsInGuild,
+							channelIds
+						)
+					}
+					val allChannelIds = channelIds + channelIdsInGuild
+
+					val removeChannels = channelOps.remove(channelKey, *allChannelIds.toTypedArray())
+
+					val removeFromShardIndex = shardIndex.removeElements(allChannelIds)
+					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
+					val removeGuildFromShardIndex = gShardIndex.removeElements(listOf(guildId))
+
+					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
+						.then(removeChannels.map { toIntExact(it) })
 				}
 		}
 	}
+
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
+		// TODO consider LUA script for atomicity
+		return Mono.defer {
+			val getChannelIds: Mono<Set<Long>> = shardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { shardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+			val getGuildIds: Mono<Set<Long>> = gShardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { gShardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+
+			val getAllChannelIds = getGuildIds.flatMap { guildIds ->
+				// Technically we don't need to fetch the channel ids of the groups here, we can rely on the shard index only.
+				guildIndex.getElementsInGroups(guildIds).collectSet()
+					.flatMap { guildIndex.deleteGroups(it).then(Mono.just(it)) }
+					.flatMap { idsInGuilds -> getChannelIds.map { channelIds -> idsInGuilds + channelIds } }
+			}
+
+			getAllChannelIds.flatMap { allChannelIds ->
+				channelOps.remove(channelKey, *allChannelIds.toTypedArray())
+			}
+		}
+	}
+
 
 	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
@@ -86,9 +118,10 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			guildOps.size(guildIndexKey(guildId))
+			guildIndex.countElementsInGroup(guildId)
 		}
 	}
+
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
@@ -104,8 +137,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 
 	override fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
 		return Flux.defer {
-			guildOps.members(guildIndexKey(guildId))
-				.collectList()
+			guildIndex.getElementsInGroup(guildId).collectList()
 				.flatMap { channelOps.multiGet(channelKey, it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}

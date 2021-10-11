@@ -85,11 +85,11 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	override fun onChannelDelete(shardId: Int, dispatch: ChannelDelete): Mono<ChannelData> {
 		val channel = dispatch.channel()
 		val channelId = channel.id().asLong()
-		val guildId = channel.guildId().toOptional()
+		val guildId: Id? = channel.guildId().toOptional().orElse(null)
 
-		val removeChannelFromGuild = when (guildId.isPresent) {
+		val removeChannelFromGuild = when (guildId != null) {
 			true -> {
-				repos.guilds.getGuildById(guildId.get().asLong())
+				repos.guilds.getGuildById(guildId.asLong())
 					.map { guildData ->
 						GuildData.builder()
 							.from(guildData)
@@ -104,7 +104,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val deleteMessagesInChannel = repos.messages.deleteByChannelId(channelId)
 
 		val deleteChannelReturningOld = repos.channels.getChannelById(channelId)
-			.flatMap { oldChannel -> repos.channels.delete(channelId).thenReturn(oldChannel) }
+			.flatMap { oldChannel -> repos.channels.delete(channelId, guildId?.asLong()).thenReturn(oldChannel) }
 
 		return removeChannelFromGuild
 			.and(deleteMessagesInChannel)
@@ -207,7 +207,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				val channelIds = guild.channels().map { it.asLong() }
 				val roleIds = guild.roles().map { it.asLong() }
 				val emojiIds = guild.emojis().map { it.asLong() }
-				val deleteChannels = repos.channels.deleteByIds(channelIds)
+				val deleteChannels = repos.channels.deleteByGuildId(channelIds, guildId)
 				val deleteRoles = repos.roles.deleteByIds(roleIds)
 				val deleteEmojis = repos.emojis.deleteByIds(emojiIds)
 				val deleteMembers = repos.members.deleteByGuildId(guildId)

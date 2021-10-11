@@ -8,9 +8,9 @@ interface ChannelRepository {
 	fun save(channel: ChannelData, shardId: Int): Mono<Void>
 	fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void>
 
-	fun delete(channelId: Long): Mono<Int>
-	fun deleteByIds(channelIds: List<Long>): Mono<Int>
-	fun deleteByShardId(shardId: Int): Mono<Int>
+	fun delete(channelId: Long, guildId: Long?): Mono<Int>
+	fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Int>
+	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countChannels(): Mono<Long>
 	fun countChannelsInGuild(guildId: Long): Mono<Long>
