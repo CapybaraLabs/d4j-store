@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.RoleRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -67,33 +68,33 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	override fun deleteById(roleId: Long): Mono<Int> {
+	override fun deleteById(roleId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByIds(roleIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(roleIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it
 					.createStatement("DELETE FROM d4j_discord_role WHERE role_id = ANY($1)")
 					.bind("$1", roleIds.toTypedArray())
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
 					.bind("$1", shardId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

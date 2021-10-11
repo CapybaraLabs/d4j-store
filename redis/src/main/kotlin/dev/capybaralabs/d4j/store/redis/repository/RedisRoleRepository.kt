@@ -8,8 +8,8 @@ import reactor.core.publisher.Mono
 
 class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), RoleRepository {
 
-	private val hash = key("role")
-	private val hashOps = factory.createRedisHashOperations<String, Long, RoleData>()
+	private val roleKey = key("role")
+	private val roleOps = factory.createRedisHashOperations<String, Long, RoleData>()
 
 	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
 		return saveAll(guildId, listOf(role), shardId)
@@ -17,31 +17,29 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			hashOps.putAll(hash, roles.associateBy { it.id().asLong() }).then()
+			roleOps.putAll(roleKey, roles.associateBy { it.id().asLong() }).then()
 		}
 	}
 
-	override fun deleteById(roleId: Long): Mono<Int> {
+	override fun deleteById(roleId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, roleId)
-				.map { StrictMath.toIntExact(it) }
+			roleOps.remove(roleKey, roleId)
 		}
 	}
 
-	override fun deleteByIds(roleIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(roleIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, *roleIds.toTypedArray())
-				.map { StrictMath.toIntExact(it) }
+			roleOps.remove(roleKey, *roleIds.toTypedArray())
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
 	override fun countRoles(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			roleOps.size(roleKey)
 		}
 	}
 
@@ -51,7 +49,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun getRoles(): Flux<RoleData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			roleOps.values(roleKey)
 		}
 	}
 
@@ -61,7 +59,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun getRoleById(roleId: Long): Mono<RoleData> {
 		return Mono.defer {
-			hashOps.get(hash, roleId)
+			roleOps.get(roleKey, roleId)
 		}
 	}
 }

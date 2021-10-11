@@ -8,7 +8,7 @@ interface UserRepository {
 	fun save(user: UserData): Mono<Void>
 	fun saveAll(users: List<UserData>): Mono<Void>
 
-	fun deleteById(userId: Long): Mono<Int>
+	fun deleteById(userId: Long): Mono<Long>
 
 	fun countUsers(): Mono<Long>
 

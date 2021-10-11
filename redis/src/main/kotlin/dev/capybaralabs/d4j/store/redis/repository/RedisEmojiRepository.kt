@@ -3,14 +3,13 @@ package dev.capybaralabs.d4j.store.redis.repository
 import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.EmojiData
-import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), EmojiRepository {
 
-	private val hash = key("emoji")
-	private val hashOps = factory.createRedisHashOperations<String, Long, EmojiData>()
+	private val emojiKey = key("emoji")
+	private val emojiOps = factory.createRedisHashOperations<String, Long, EmojiData>()
 
 	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
 		return saveAll(guildId, listOf(emoji), shardId)
@@ -23,25 +22,24 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 		}
 
 		return Mono.defer {
-			hashOps.putAll(hash, emojis.associateBy { it.id().get().asLong() }).then()
+			emojiOps.putAll(emojiKey, emojis.associateBy { it.id().get().asLong() }).then()
 		}
 	}
 
-	override fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(emojiIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, *emojiIds.toTypedArray())
-				.map { toIntExact(it) }
+			emojiOps.remove(emojiKey, *emojiIds.toTypedArray())
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		// look up ids from shard repo
 		TODO("Not yet implemented")
 	}
 
 	override fun countEmojis(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			emojiOps.size(emojiKey)
 		}
 	}
 
@@ -52,7 +50,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 
 	override fun getEmojis(): Flux<EmojiData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			emojiOps.values(emojiKey)
 		}
 	}
 
@@ -63,7 +61,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 
 	override fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData> {
 		return Mono.defer {
-			hashOps.get(hash, emojiId)
+			emojiOps.get(emojiKey, emojiId)
 		}
 	}
 }

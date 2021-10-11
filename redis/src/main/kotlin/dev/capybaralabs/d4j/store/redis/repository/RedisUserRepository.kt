@@ -3,14 +3,13 @@ package dev.capybaralabs.d4j.store.redis.repository
 import dev.capybaralabs.d4j.store.common.repository.UserRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.UserData
-import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), UserRepository {
 
-	private val hash = key("user")
-	private val hashOps = factory.createRedisHashOperations<String, Long, UserData>()
+	private val userKey = key("user")
+	private val userOps = factory.createRedisHashOperations<String, Long, UserData>()
 
 	override fun save(user: UserData): Mono<Void> {
 		return saveAll(listOf(user))
@@ -18,32 +17,31 @@ class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun saveAll(users: List<UserData>): Mono<Void> {
 		return Mono.defer {
-			hashOps.putAll(hash, users.associateBy { it.id().asLong() }).then()
+			userOps.putAll(userKey, users.associateBy { it.id().asLong() }).then()
 		}
 	}
 
-	override fun deleteById(userId: Long): Mono<Int> {
+	override fun deleteById(userId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, userId)
-				.map { toIntExact(it) }
+			userOps.remove(userKey, userId)
 		}
 	}
 
 	override fun countUsers(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			userOps.size(userKey)
 		}
 	}
 
 	override fun getUsers(): Flux<UserData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			userOps.values(userKey)
 		}
 	}
 
 	override fun getUserById(userId: Long): Mono<UserData> {
 		return Mono.defer {
-			hashOps.get(hash, userId)
+			userOps.get(userKey, userId)
 		}
 	}
 }

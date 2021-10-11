@@ -8,10 +8,10 @@ import reactor.core.publisher.Mono
 
 class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
 
-	private val hash = key("member")
-	private val hashOps = factory.createRedisHashOperations<String, String, MemberData>()
+	private val memberKey = key("member")
+	private val memberOps = factory.createRedisHashOperations<String, String, MemberData>()
 
-	private fun memberKey(guildId: Long, userId: Long): String {
+	private fun memberId(guildId: Long, userId: Long): String {
 		return "$guildId:$userId"
 	}
 
@@ -21,31 +21,30 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	override fun saveAll(guildId: Long, members: List<MemberData>, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			hashOps.putAll(hash, members.associateBy { memberKey(guildId, it.user().id().asLong()) }).then()
+			memberOps.putAll(memberKey, members.associateBy { memberId(guildId, it.user().id().asLong()) }).then()
 		}
 
 	}
 
-	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, memberKey(guildId, userId))
-				.map { StrictMath.toIntExact(it) }
+			memberOps.remove(memberKey, memberId(guildId, userId))
 		}
 	}
 
-	override fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		// uuuhhhhhh...ask guild about the ids?
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		// ask shard about the ids
 		TODO("Not yet implemented")
 	}
 
 	override fun countMembers(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			memberOps.size(memberKey)
 		}
 	}
 
@@ -56,7 +55,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	override fun getMembers(): Flux<MemberData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			memberOps.values(memberKey)
 		}
 	}
 
@@ -67,7 +66,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	override fun getMemberById(guildId: Long, userId: Long): Mono<MemberData> {
 		return Mono.defer {
-			hashOps.get(hash, memberKey(guildId, userId))
+			memberOps.get(memberKey, memberId(guildId, userId))
 		}
 	}
 

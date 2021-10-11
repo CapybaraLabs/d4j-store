@@ -6,7 +6,6 @@ import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
-import java.lang.StrictMath.toIntExact
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -51,18 +50,18 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	}
 
 
-	override fun delete(channelId: Long, guildId: Long?): Mono<Int> {
+	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
 			val removeChannel = channelOps.remove(channelKey, channelId)
 			val removeFromShardIndex = shardIndex.removeElements(listOf(channelId))
 			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, listOf(channelId)) else Mono.empty()
 
 			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
-				.then(removeChannel.map { toIntExact(it) })
+				.then(removeChannel)
 		}
 	}
 
-	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Long> {
 		// TODO consider LUA script for atomicity
 		return Mono.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
@@ -83,7 +82,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 					val removeGuildFromShardIndex = gShardIndex.removeElements(listOf(guildId))
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
-						.then(removeChannels.map { toIntExact(it) })
+						.then(removeChannels)
 				}
 		}
 	}

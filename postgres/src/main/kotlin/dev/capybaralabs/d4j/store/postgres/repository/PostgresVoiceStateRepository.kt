@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -77,33 +78,33 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		// TODO consider deleting those that are not in a channel?
 	}
 
-	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE user_id = $1 AND guild_id = $2")
 					.bind("$1", userId)
 					.bind("$2", guildId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE guild_id = $1")
 					.bind("$1", guildId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE shard_index = $1")
 					.bind("$1", shardId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

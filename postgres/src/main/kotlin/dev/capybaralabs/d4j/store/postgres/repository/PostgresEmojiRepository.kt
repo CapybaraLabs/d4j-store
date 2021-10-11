@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -68,23 +69,23 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	override fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(emojiIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1)")
 					.bind("$1", emojiIds.toTypedArray())
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE shard_index = $1")
 					.bind("$1", shardId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

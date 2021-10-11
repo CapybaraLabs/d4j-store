@@ -10,9 +10,9 @@ interface PresenceRepository {
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void>
 
-	fun deleteById(guildId: Long, userId: Long): Mono<Int>
-	fun deleteByGuildId(guildId: Long): Mono<Int>
-	fun deleteByShardId(shardId: Int): Mono<Int>
+	fun deleteById(guildId: Long, userId: Long): Mono<Long>
+	fun deleteByGuildId(guildId: Long): Mono<Long>
+	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countPresences(): Mono<Long>
 	fun countPresencesInGuild(guildId: Long): Mono<Long>

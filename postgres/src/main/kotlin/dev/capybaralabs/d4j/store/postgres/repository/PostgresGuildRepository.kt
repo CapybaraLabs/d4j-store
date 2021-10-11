@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.GuildRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -53,12 +54,12 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 	}
 
 
-	override fun delete(guildId: Long): Mono<Int> {
+	override fun delete(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE guild_id = $1")
 					.bind("$1", guildId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
@@ -75,12 +76,12 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 //		}
 //	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE shard_index = $1")
 					.bind("$1", shardId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

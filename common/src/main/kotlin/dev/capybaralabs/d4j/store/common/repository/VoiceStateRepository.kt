@@ -8,9 +8,9 @@ interface VoiceStateRepository {
 	fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void>
 	fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void>
 
-	fun deleteById(guildId: Long, userId: Long): Mono<Int>
-	fun deleteByGuildId(guildId: Long): Mono<Int>
-	fun deleteByShardId(shardId: Int): Mono<Int>
+	fun deleteById(guildId: Long, userId: Long): Mono<Long>
+	fun deleteByGuildId(guildId: Long): Mono<Long>
+	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countVoiceStates(): Mono<Long>
 	fun countVoiceStatesInGuild(guildId: Long): Mono<Long>

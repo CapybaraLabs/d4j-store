@@ -208,8 +208,8 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				val roleIds = guild.roles().map { it.asLong() }
 				val emojiIds = guild.emojis().map { it.asLong() }
 				val deleteChannels = repos.channels.deleteByGuildId(channelIds, guildId)
-				val deleteRoles = repos.roles.deleteByIds(roleIds)
-				val deleteEmojis = repos.emojis.deleteByIds(emojiIds)
+				val deleteRoles = repos.roles.deleteByGuildId(roleIds, guildId)
+				val deleteEmojis = repos.emojis.deleteByGuildId(emojiIds, guildId)
 				val deleteMembers = repos.members.deleteByGuildId(guildId)
 				val deleteMessages = repos.messages.deleteByChannelIds(guild.channels().map { it.asLong() })
 				// TODO delete no longer visible users
@@ -240,12 +240,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			repos.guilds.save(updated, shardId)
 		}
 
-		val deleteEmojis: (GuildData) -> Mono<Int> = { oldGuild: GuildData ->
+		val deleteEmojis: (GuildData) -> Mono<Long> = { oldGuild: GuildData ->
 			// delete those emojis that are in the old guild but not the dispatch
 			val toDelete = oldGuild.emojis()
 				.filter { id -> dispatch.emojis().none { emoji -> emoji.id().isPresent && emoji.id().get() == id } }
 				.map { it.asLong() }
-			repos.emojis.deleteByIds(toDelete)
+			repos.emojis.deleteByGuildId(toDelete, guildId)
 		}
 
 		val saveEmojis = dispatch.emojis()

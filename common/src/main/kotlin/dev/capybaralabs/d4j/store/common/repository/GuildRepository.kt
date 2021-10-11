@@ -7,8 +7,8 @@ import reactor.core.publisher.Mono
 interface GuildRepository {
 	fun save(guild: GuildData, shardId: Int): Mono<Void>
 
-	fun delete(guildId: Long): Mono<Int>
-	fun deleteByShardId(shardId: Int): Mono<Int>
+	fun delete(guildId: Long): Mono<Long>
+	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countGuilds(): Mono<Long>
 

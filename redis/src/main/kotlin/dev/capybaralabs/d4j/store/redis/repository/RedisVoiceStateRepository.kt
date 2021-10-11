@@ -4,16 +4,15 @@ import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.VoiceStateData
-import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
 
-	private val hash = key("voicestate")
-	private val hashOps = factory.createRedisHashOperations<String, String, VoiceStateData>()
+	private val voiceStateKey = key("voicestate")
+	private val voiceStateOps = factory.createRedisHashOperations<String, String, VoiceStateData>()
 
-	private fun voiceStateKey(guildId: Long, userId: Long): String {
+	private fun voiceStateId(guildId: Long, userId: Long): String {
 		return "$guildId:$userId"
 	}
 
@@ -32,33 +31,32 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 		}
 
 		return Mono.defer {
-			hashOps.putAll(hash, voiceStatesInChannels
+			voiceStateOps.putAll(voiceStateKey, voiceStatesInChannels
 				.associateBy {
-					voiceStateKey(it.guildId().get().asLong(), it.userId().asLong())
+					voiceStateId(it.guildId().get().asLong(), it.userId().asLong())
 				})
 				.then()
 		}
 
 	}
 
-	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, voiceStateKey(guildId, userId))
-				.map { toIntExact(it) }
+			voiceStateOps.remove(voiceStateKey, voiceStateId(guildId, userId))
 		}
 	}
 
-	override fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
 	override fun countVoiceStates(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			voiceStateOps.size(voiceStateKey)
 		}
 	}
 
@@ -72,7 +70,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 
 	override fun getVoiceStates(): Flux<VoiceStateData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			voiceStateOps.values(voiceStateKey)
 		}
 	}
 
@@ -86,7 +84,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 
 	override fun getVoiceStateById(guildId: Long, userId: Long): Mono<VoiceStateData> {
 		return Mono.defer {
-			hashOps.get(hash, voiceStateKey(guildId, userId))
+			voiceStateOps.get(voiceStateKey, voiceStateId(guildId, userId))
 		}
 	}
 }

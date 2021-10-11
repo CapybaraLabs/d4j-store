@@ -3,50 +3,47 @@ package dev.capybaralabs.d4j.store.redis.repository
 import dev.capybaralabs.d4j.store.common.repository.MessageRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MessageData
-import java.lang.StrictMath.toIntExact
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
 
-	private val hash = key("message")
-	private val hashOps = factory.createRedisHashOperations<String, Long, MessageData>()
+	private val messageKey = key("message")
+	private val messageOps = factory.createRedisHashOperations<String, Long, MessageData>()
 
 	override fun save(message: MessageData, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			hashOps.put(hash, message.id().asLong(), message).then()
+			messageOps.put(messageKey, message.id().asLong(), message).then()
 		}
 	}
 
-	override fun delete(messageId: Long): Mono<Int> {
+	override fun delete(messageId: Long): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, messageId)
-				.map { toIntExact(it) }
+			messageOps.remove(messageKey, messageId)
 		}
 	}
 
-	override fun deleteByIds(messageIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(messageIds: List<Long>): Mono<Long> {
 		return Mono.defer {
-			hashOps.remove(hash, *messageIds.toTypedArray())
-				.map { toIntExact(it) }
+			messageOps.remove(messageKey, *messageIds.toTypedArray())
 		}
 	}
 
-	override fun deleteByShardId(shardId: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByChannelId(channelId: Long): Mono<Int> {
+	override fun deleteByChannelId(channelId: Long): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
-	override fun deleteByChannelIds(channelIds: List<Long>): Mono<Int> {
+	override fun deleteByChannelIds(channelIds: List<Long>): Mono<Long> {
 		TODO("Not yet implemented")
 	}
 
 	override fun countMessages(): Mono<Long> {
 		return Mono.defer {
-			hashOps.size(hash)
+			messageOps.size(messageKey)
 		}
 	}
 
@@ -56,7 +53,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 
 	override fun getMessages(): Flux<MessageData> {
 		return Flux.defer {
-			hashOps.values(hash)
+			messageOps.values(messageKey)
 		}
 	}
 
@@ -66,13 +63,13 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 
 	override fun getMessageById(messageId: Long): Mono<MessageData> {
 		return Mono.defer {
-			hashOps.get(hash, messageId)
+			messageOps.get(messageKey, messageId)
 		}
 	}
 
 	override fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
 		return Flux.defer {
-			hashOps.multiGet(hash, messageIds)
+			messageOps.multiGet(messageKey, messageIds)
 				.flatMapIterable { it }
 		}
 	}

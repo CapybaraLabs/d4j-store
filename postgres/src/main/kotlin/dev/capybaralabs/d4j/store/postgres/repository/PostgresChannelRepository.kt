@@ -77,22 +77,22 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun delete(channelId: Long, guildId: Long?): Mono<Int> {
+	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = $1")
 					.bind("$1", channelId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = ANY($1)")
 					.bind("$1", channelIds.toTypedArray())
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

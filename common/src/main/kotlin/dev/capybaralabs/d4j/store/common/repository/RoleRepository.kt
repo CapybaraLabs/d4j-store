@@ -8,9 +8,9 @@ interface RoleRepository {
 	fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void>
 	fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void>
 
-	fun deleteById(roleId: Long): Mono<Int>
-	fun deleteByIds(roleIds: List<Long>): Mono<Int>
-	fun deleteByShardId(shardId: Int): Mono<Int>
+	fun deleteById(roleId: Long): Mono<Long>
+	fun deleteByGuildId(roleIds: List<Long>, guildId: Long): Mono<Long>
+	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countRoles(): Mono<Long>
 	fun countRolesInGuild(guildId: Long): Mono<Long>

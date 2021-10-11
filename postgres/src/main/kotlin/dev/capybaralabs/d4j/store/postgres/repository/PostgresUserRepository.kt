@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.UserRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
@@ -63,12 +64,12 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	override fun deleteById(userId: Long): Mono<Int> {
+	override fun deleteById(userId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_user WHERE user_id = $1")
 					.bind("$1", userId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
