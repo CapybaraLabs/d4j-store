@@ -16,6 +16,10 @@ class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	}
 
 	override fun saveAll(users: List<UserData>): Mono<Void> {
+		if (users.isEmpty()) {
+			return Mono.empty()
+		}
+
 		return Mono.defer {
 			userOps.putAll(userKey, users.associateBy { it.id().asLong() }).then()
 		}

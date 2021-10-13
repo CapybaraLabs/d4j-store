@@ -28,6 +28,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	}
 
 	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
+		if (channels.isEmpty()) {
+			return Mono.empty()
+		}
 		// TODO consider LUA script for atomicity
 		return Mono.defer {
 			val addToShardIndex = shardIndex.addElements(shardId, channels.map { it.id().asLong() })

@@ -20,6 +20,9 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 	}
 
 	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void> {
+		if (presences.isEmpty()) {
+			return Mono.empty()
+		}
 		return Mono.defer {
 			presenceOps.putAll(presenceKey, presences.associateBy { presenceKey(guildId, it.user().id().asLong()) }).then()
 		}

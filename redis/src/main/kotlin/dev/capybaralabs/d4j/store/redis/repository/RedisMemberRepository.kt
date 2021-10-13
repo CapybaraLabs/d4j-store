@@ -20,6 +20,9 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 	}
 
 	override fun saveAll(guildId: Long, members: List<MemberData>, shardId: Int): Mono<Void> {
+		if (members.isEmpty()) {
+			return Mono.empty()
+		}
 		return Mono.defer {
 			memberOps.putAll(memberKey, members.associateBy { memberId(guildId, it.user().id().asLong()) }).then()
 		}

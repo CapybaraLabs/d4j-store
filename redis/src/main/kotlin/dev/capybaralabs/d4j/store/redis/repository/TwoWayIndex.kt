@@ -18,6 +18,9 @@ class TwoWayIndex(private val key: String, factory: RedisFactory) {
 	private val zsetOps = factory.createRedisZSetOperations<String, Long>()
 
 	fun addElements(groupId: Int, elements: Collection<Long>): Mono<Long> {
+		if (elements.isEmpty()) {
+			return Mono.empty()
+		}
 		val tuples = elements.map { ZSetOperations.TypedTuple.of(it, groupId.toDouble()) }
 		return zsetOps.addAll(key, tuples)
 	}
