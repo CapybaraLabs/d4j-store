@@ -70,11 +70,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 			guildIndex.getElementsInGroup(guildId).collectList()
 				.flatMap { channelIdsInGuild ->
 					if (channelIds != channelIdsInGuild) {
-						log.warn(
-							"Channel guild index deviates from channel ids parameter: {} vs {}",
-							channelIdsInGuild,
-							channelIds
-						)
+						log.warn("Guild index deviates from ids parameter: {} vs {}", channelIdsInGuild, channelIds)
 					}
 					val allChannelIds = channelIds + channelIdsInGuild
 
@@ -105,9 +101,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 					.flatMap { idsInGuilds -> getChannelIds.map { channelIds -> idsInGuilds + channelIds } }
 			}
 
-			getAllChannelIds.flatMap { allChannelIds ->
-				channelOps.remove(channelKey, *allChannelIds.toTypedArray())
-			}
+			getAllChannelIds.flatMap { channelOps.remove(channelKey, *it.toTypedArray()) }
 		}
 	}
 

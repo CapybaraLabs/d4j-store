@@ -68,7 +68,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	override fun deleteById(roleId: Long): Mono<Long> {
+	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")

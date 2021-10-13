@@ -410,7 +410,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
 
-		val deleteRole = repos.roles.deleteById(roleId)
+		val deleteRole = repos.roles.deleteById(roleId, guildId)
 
 		val removeRoleFromMembers = repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
