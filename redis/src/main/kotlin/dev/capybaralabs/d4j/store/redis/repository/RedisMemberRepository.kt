@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
+import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.MemberRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MemberData
@@ -10,6 +11,10 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	private val memberKey = key("member")
 	private val memberOps = factory.createRedisHashOperations<String, String, MemberData>()
+
+	private val shardIndex = twoWayIndex("$memberKey:shard-index", factory, String::class.java)
+	private val guildIndex = OneWayIndex("$memberKey:guild-index", factory)
+	private val gShardIndex = twoWayIndex("$memberKey:guild-shard-index", factory)
 
 	private fun memberId(guildId: Long, userId: Long): String {
 		return "$guildId:$userId"
@@ -24,25 +29,63 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 			return Mono.empty()
 		}
 		return Mono.defer {
-			memberOps.putAll(memberKey, members.associateBy { memberId(guildId, it.user().id().asLong()) }).then()
+			val memberMap = members.associateBy { memberId(guildId, it.user().id().asLong()) }
+			val userIds = members.map { it.user().id().asLong() }
+
+			val addToShardIndex = shardIndex.addElements(shardId, memberMap.keys)
+			val addToGuildIndex = guildIndex.addElements(guildId, userIds)
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
+
+			val save = memberOps.putAll(memberKey, memberMap)
+
+			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
 
 	}
 
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
+		val memberId = memberId(guildId, userId)
 		return Mono.defer {
-			memberOps.remove(memberKey, memberId(guildId, userId))
+			val removeFromShardIndex = shardIndex.removeElements(memberId)
+			val removeFromGuildIndex = guildIndex.removeElements(guildId, listOf(userId))
+
+			val remove = memberOps.remove(memberKey, memberId)
+
+			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
+				.then(remove)
 		}
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		// uuuhhhhhh...ask guild about the ids?
-		TODO("Not yet implemented")
+		return Mono.defer {
+			guildIndex.getElementsInGroup(guildId).collectList()
+				.flatMap { userIds ->
+					val memberIds = userIds.map { memberId(guildId, it) }
+					val removeFromShardIndex = shardIndex.removeElements(*memberIds.toTypedArray())
+					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
+					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
+
+					val remove = memberOps.remove(memberKey, *memberIds.toTypedArray())
+
+					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
+						.then(remove)
+				}
+		}
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		// ask shard about the ids
-		TODO("Not yet implemented")
+		return Mono.defer {
+			val removeFromGuildIndices = gShardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { gShardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+				.flatMap { guildIds -> guildIndex.deleteGroups(guildIds) }
+
+			val delete = shardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { shardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+				.flatMap { memberOps.remove(memberKey, *it.toTypedArray()) }
+
+			removeFromGuildIndices.then(delete)
+		}
+
 	}
 
 	override fun countMembers(): Mono<Long> {
@@ -52,8 +95,9 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 	}
 
 	override fun countMembersInGuild(guildId: Long): Mono<Long> {
-		// ask guilds about ids
-		TODO("Not yet implemented")
+		return Mono.defer {
+			guildIndex.countElementsInGroup(guildId)
+		}
 	}
 
 	override fun getMembers(): Flux<MemberData> {
@@ -63,8 +107,12 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 	}
 
 	override fun getExactMembersInGuild(guildId: Long): Flux<MemberData> {
-		// ask guild about ids
-		TODO("Not yet implemented")
+		return Flux.defer {
+			guildIndex.getElementsInGroup(guildId).collectList()
+				.flatMap { memberOps.multiGet(memberKey, it.map { userId -> memberId(guildId, userId) }) }
+				.flatMapMany { Flux.fromIterable(it) }
+		}
+
 	}
 
 	override fun getMemberById(guildId: Long, userId: Long): Mono<MemberData> {

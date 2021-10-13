@@ -19,9 +19,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val channelKey = key("channel")
 	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
-	private val shardIndex = TwoWayIndex("$channelKey:shard-index", factory)
+	private val shardIndex = twoWayIndex("$channelKey:shard-index", factory)
 	private val guildIndex = OneWayIndex("$channelKey:guild-index", factory)
-	private val gShardIndex = TwoWayIndex("$channelKey:guild-shard-index", factory)
+	private val gShardIndex = twoWayIndex("$channelKey:guild-shard-index", factory)
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
@@ -56,7 +56,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
 			val removeChannel = channelOps.remove(channelKey, channelId)
-			val removeFromShardIndex = shardIndex.removeElements(listOf(channelId))
+			val removeFromShardIndex = shardIndex.removeElements(channelId)
 			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, listOf(channelId)) else Mono.empty()
 
 			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
@@ -76,9 +76,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 
 					val removeChannels = channelOps.remove(channelKey, *allChannelIds.toTypedArray())
 
-					val removeFromShardIndex = shardIndex.removeElements(allChannelIds)
+					val removeFromShardIndex = shardIndex.removeElements(*allChannelIds.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
-					val removeGuildFromShardIndex = gShardIndex.removeElements(listOf(guildId))
+					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(removeChannels)

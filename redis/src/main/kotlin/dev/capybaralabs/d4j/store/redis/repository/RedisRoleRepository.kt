@@ -18,9 +18,9 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	private val roleKey = key("role")
 	private val roleOps = factory.createRedisHashOperations<String, Long, RoleData>()
 
-	private val shardIndex = TwoWayIndex("$roleKey:shard-index", factory)
+	private val shardIndex = twoWayIndex("$roleKey:shard-index", factory)
 	private val guildIndex = OneWayIndex("$roleKey:guild-index", factory)
-	private val gShardIndex = TwoWayIndex("$roleKey:guild-shard-index", factory)
+	private val gShardIndex = twoWayIndex("$roleKey:guild-shard-index", factory)
 
 	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
 		return saveAll(guildId, listOf(role), shardId)
@@ -46,7 +46,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			val remove = roleOps.remove(roleKey, roleId)
-			val removeFromShardIndex = shardIndex.removeElements(listOf(roleId))
+			val removeFromShardIndex = shardIndex.removeElements(roleId)
 			val removeFromGuildIndex = guildIndex.removeElements(guildId, listOf(roleId))
 
 			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
@@ -64,9 +64,9 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 					}
 					val allIds = roleIds + idsInGuild
 
-					val removeFromShardIndex = shardIndex.removeElements(allIds)
+					val removeFromShardIndex = shardIndex.removeElements(*allIds.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
-					val removeGuildFromShardIndex = gShardIndex.removeElements(listOf(guildId))
+					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
 					val remove = roleOps.remove(roleKey, *allIds.toTypedArray())
 

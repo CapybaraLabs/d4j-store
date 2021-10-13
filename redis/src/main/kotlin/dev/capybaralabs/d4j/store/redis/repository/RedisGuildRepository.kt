@@ -12,7 +12,7 @@ class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	private val guildKey = key("guild")
 	private val guildOps = factory.createRedisHashOperations<String, Long, GuildData>()
 
-	private val shardIndex = TwoWayIndex("$guildKey:shard-index", factory)
+	private val shardIndex = twoWayIndex("$guildKey:shard-index", factory)
 
 	override fun save(guild: GuildData, shardId: Int): Mono<Void> {
 		return Mono.defer {
@@ -25,7 +25,7 @@ class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisReposit
 
 	override fun delete(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			val removeFromShardIndex = shardIndex.removeElements(listOf(guildId))
+			val removeFromShardIndex = shardIndex.removeElements(guildId)
 			val remove = guildOps.remove(guildKey, guildId)
 
 			removeFromShardIndex.then(remove)

@@ -40,8 +40,12 @@ class RedisFactory(val connectionFactory: ReactiveRedisConnectionFactory, val ob
 	}
 
 	inline fun <reified K, reified V> createRedisZSetOperations(): ReactiveZSetOperations<K, V> {
-		val keySerializer = Jackson2JsonRedisSerializer(K::class.java)
-		val valueSerializer = Jackson2JsonRedisSerializer(V::class.java)
+		return createRedisZSetOperations<K, V>(K::class.java, V::class.java)
+	}
+
+	fun <K, V> createRedisZSetOperations(kClass: Class<K>, vClass: Class<V>): ReactiveZSetOperations<K, V> {
+		val keySerializer = Jackson2JsonRedisSerializer(kClass)
+		val valueSerializer = Jackson2JsonRedisSerializer(vClass)
 		valueSerializer.setObjectMapper(objectMapper)
 
 		val context = RedisSerializationContext.newSerializationContext<K, V>(StringRedisSerializer())
