@@ -19,9 +19,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val channelKey = key("channel")
 	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
-	private val shardIndex = TwoWayIndex("channel:shard-index", factory)
-	private val guildIndex = OneWayIndex("channel:guild-index", factory)
-	private val gShardIndex = TwoWayIndex("channel:guild-shard-index", factory)
+	private val shardIndex = TwoWayIndex("$channelKey:shard-index", factory)
+	private val guildIndex = OneWayIndex("$channelKey:guild-index", factory)
+	private val gShardIndex = TwoWayIndex("$channelKey:guild-shard-index", factory)
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
