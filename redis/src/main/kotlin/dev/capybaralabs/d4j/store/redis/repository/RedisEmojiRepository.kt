@@ -77,7 +77,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 			val getAllIds = getGuildIds.flatMap { guildIds ->
 				// Technically we don't need to fetch the ids from the groups here, we can rely on the shard index only.
 				guildIndex.getElementsInGroups(guildIds).collectSet()
-					.flatMap { guildIndex.deleteGroups(it).then(Mono.just(it)) }
+					.flatMap { guildIndex.deleteGroups(guildIds).then(Mono.just(it)) }
 					.flatMap { idsInGuilds -> getIds.map { ids -> idsInGuilds + ids } }
 			}
 

@@ -97,7 +97,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 			val getAllChannelIds = getGuildIds.flatMap { guildIds ->
 				// Technically we don't need to fetch the channel ids of the groups here, we can rely on the shard index only.
 				guildIndex.getElementsInGroups(guildIds).collectSet()
-					.flatMap { guildIndex.deleteGroups(it).then(Mono.just(it)) }
+					.flatMap { guildIndex.deleteGroups(guildIds).then(Mono.just(it)) }
 					.flatMap { idsInGuilds -> getChannelIds.map { channelIds -> idsInGuilds + channelIds } }
 			}
 
