@@ -55,7 +55,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun delete(messageId: Long): Mono<Long> {
+	override fun delete(messageId: Long, channelId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id = $1")
@@ -65,7 +65,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 		}
 	}
 
-	override fun deleteByIds(messageIds: List<Long>): Mono<Long> {
+	override fun deleteByIds(messageIds: List<Long>, channelId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_message WHERE message_id = ANY($1)")

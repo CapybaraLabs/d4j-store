@@ -525,14 +525,16 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 
 	override fun onMessageDelete(shardId: Int, dispatch: MessageDelete): Mono<MessageData> {
 		val messageId = dispatch.id().asLong()
+		val channelId = dispatch.channelId().asLong()
 		return repos.messages.getMessageById(messageId)
-			.flatMap { repos.messages.delete(messageId).thenReturn(it) }
+			.flatMap { repos.messages.delete(messageId, channelId).thenReturn(it) }
 	}
 
 	override fun onMessageDeleteBulk(shardId: Int, dispatch: MessageDeleteBulk): Mono<Set<MessageData>> {
 		val messageIds = dispatch.ids().map { it.asLong() }
+		val channelId = dispatch.channelId().asLong()
 
-		val deleteMessages = repos.messages.deleteByIds(messageIds)
+		val deleteMessages = repos.messages.deleteByIds(messageIds, channelId)
 
 		return repos.messages.getMessagesByIds(messageIds)
 			.collectList().map { it.toSet() }

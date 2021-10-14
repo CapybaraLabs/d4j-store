@@ -7,8 +7,8 @@ import reactor.core.publisher.Mono
 interface MessageRepository {
 	fun save(message: MessageData, shardId: Int): Mono<Void>
 
-	fun delete(messageId: Long): Mono<Long>
-	fun deleteByIds(messageIds: List<Long>): Mono<Long>
+	fun delete(messageId: Long, channelId: Long): Mono<Long>
+	fun deleteByIds(messageIds: List<Long>, channelId: Long): Mono<Long>
 	fun deleteByShardId(shardId: Int): Mono<Long>
 	fun deleteByChannelId(channelId: Long): Mono<Long>
 	fun deleteByChannelIds(channelIds: List<Long>): Mono<Long>

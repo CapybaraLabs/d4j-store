@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
+import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.MessageRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MessageData
@@ -11,34 +12,77 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	private val messageKey = key("message")
 	private val messageOps = factory.createRedisHashOperations<String, Long, MessageData>()
 
+	private val shardIndex = twoWayIndex("$messageKey:shard-index", factory)
+	private val channelIndex = OneWayIndex("$messageKey:channel-index", factory)
+	private val channelShardIndex = twoWayIndex("$messageKey:channel-shard-index", factory)
+
 	override fun save(message: MessageData, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			messageOps.put(messageKey, message.id().asLong(), message).then()
+			val messageId = message.id().asLong()
+			val channelId = message.channelId().asLong()
+
+			val addToShardIndex = shardIndex.addElements(shardId, listOf(messageId))
+			val addToChannelIndex = channelIndex.addElements(channelId, listOf(messageId))
+			val addToChannelShardIndex = channelShardIndex.addElements(shardId, listOf(channelId))
+
+			val save = messageOps.put(messageKey, messageId, message)
+
+			Mono.`when`(addToShardIndex, addToChannelIndex, addToChannelShardIndex, save)
 		}
 	}
 
-	override fun delete(messageId: Long): Mono<Long> {
-		return Mono.defer {
-			messageOps.remove(messageKey, messageId)
-		}
+	override fun delete(messageId: Long, channelId: Long): Mono<Long> {
+		return deleteByIds(listOf(messageId), channelId)
 	}
 
-	override fun deleteByIds(messageIds: List<Long>): Mono<Long> {
+	override fun deleteByIds(messageIds: List<Long>, channelId: Long): Mono<Long> {
 		return Mono.defer {
-			messageOps.remove(messageKey, *messageIds.toTypedArray())
+			val removeFromShardIndex = shardIndex.removeElements(*messageIds.toTypedArray())
+			val removeFromChannelIndex = channelIndex.removeElements(channelId, messageIds)
+
+			val remove = messageOps.remove(messageKey, *messageIds.toTypedArray())
+
+			Mono.`when`(removeFromShardIndex, removeFromChannelIndex)
+				.then(remove)
 		}
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			val getIds: Mono<Set<Long>> = shardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { shardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+			val getChannelIds: Mono<Set<Long>> = channelShardIndex.getElementsByGroup(shardId).collectSet()
+				.flatMap { channelShardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
+
+			val getAllIds = getChannelIds.flatMap { channelIds ->
+				// Technically we don't need to fetch the ids from the groups here, we can rely on the shard index only.
+				channelIndex.getElementsInGroups(channelIds).collectSet()
+					.flatMap { channelIndex.deleteGroups(channelIds).then(Mono.just(it)) }
+					.flatMap { idsInChannels -> getIds.map { ids -> idsInChannels + ids } }
+			}
+
+			getAllIds.flatMap { messageOps.remove(messageKey, *it.toTypedArray()) }
+		}
 	}
 
 	override fun deleteByChannelId(channelId: Long): Mono<Long> {
-		TODO("Not yet implemented")
+		return deleteByChannelIds(listOf(channelId))
 	}
 
 	override fun deleteByChannelIds(channelIds: List<Long>): Mono<Long> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			channelIndex.getElementsInGroups(channelIds).collectList()
+				.flatMap { ids ->
+					val removeFromShardIndex = shardIndex.removeElements(*ids.toTypedArray())
+					val deleteChannelIndexEntries = channelIndex.deleteGroups(channelIds)
+					val removeChannelsFromShardIndex = channelShardIndex.removeElements(*channelIds.toTypedArray())
+
+					val remove = messageOps.remove(messageKey, *ids.toTypedArray())
+
+					Mono.`when`(removeFromShardIndex, deleteChannelIndexEntries, removeChannelsFromShardIndex)
+						.then(remove)
+				}
+		}
 	}
 
 	override fun countMessages(): Mono<Long> {
@@ -48,7 +92,9 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	}
 
 	override fun countMessagesInChannel(channelId: Long): Mono<Long> {
-		TODO("Not yet implemented")
+		return Mono.defer {
+			channelIndex.countElementsInGroup(channelId)
+		}
 	}
 
 	override fun getMessages(): Flux<MessageData> {
@@ -58,7 +104,11 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	}
 
 	override fun getMessagesInChannel(channelId: Long): Flux<MessageData> {
-		TODO("Not yet implemented")
+		return Flux.defer {
+			channelIndex.getElementsInGroup(channelId).collectList()
+				.flatMap { messageOps.multiGet(messageKey, it) }
+				.flatMapMany { Flux.fromIterable(it) }
+		}
 	}
 
 	override fun getMessageById(messageId: Long): Mono<MessageData> {
