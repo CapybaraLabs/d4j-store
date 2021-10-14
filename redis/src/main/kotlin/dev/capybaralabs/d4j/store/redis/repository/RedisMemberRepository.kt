@@ -13,7 +13,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 	private val memberOps = factory.createRedisHashOperations<String, String, MemberData>()
 
 	private val shardIndex = twoWayIndex("$memberKey:shard-index", factory, String::class.java)
-	private val guildIndex = OneWayIndex("$memberKey:guild-index", factory)
+	private val guildIndex = oneWayIndex("$memberKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$memberKey:guild-shard-index", factory)
 
 	private fun memberId(guildId: Long, userId: Long): String {
@@ -33,7 +33,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 			val userIds = members.map { it.user().id().asLong() }
 
 			val addToShardIndex = shardIndex.addElements(shardId, memberMap.keys)
-			val addToGuildIndex = guildIndex.addElements(guildId, userIds)
+			val addToGuildIndex = guildIndex.addElements(guildId, *userIds.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
 			val save = memberOps.putAll(memberKey, memberMap)
@@ -47,7 +47,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 		val memberId = memberId(guildId, userId)
 		return Mono.defer {
 			val removeFromShardIndex = shardIndex.removeElements(memberId)
-			val removeFromGuildIndex = guildIndex.removeElements(guildId, listOf(userId))
+			val removeFromGuildIndex = guildIndex.removeElements(guildId, userId)
 
 			val remove = memberOps.remove(memberKey, memberId)
 
@@ -85,7 +85,6 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 			removeFromGuildIndices.then(delete)
 		}
-
 	}
 
 	override fun countMembers(): Mono<Long> {

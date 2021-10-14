@@ -4,6 +4,14 @@ import dev.capybaralabs.d4j.store.redis.RedisFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+fun oneWayIndex(key: String, factory: RedisFactory): OneWayIndex<Long> {
+	return oneWayIndex(key, factory, Long::class.java)
+}
+
+fun <V> oneWayIndex(key: String, factory: RedisFactory, valueClass: Class<V>): OneWayIndex<V> {
+	return OneWayIndex(key, factory, valueClass)
+}
+
 /**
  * Secondary Redis index implementation.
  *
@@ -11,32 +19,32 @@ import reactor.core.publisher.Mono
  *
  * Use [TwoWayIndex] to build indices that are bi-directional.
  */
-class OneWayIndex(private val keyPrefix: String, factory: RedisFactory) {
+class OneWayIndex<V>(private val keyPrefix: String, factory: RedisFactory, valueClass: Class<V>) {
 
-	private val ops = factory.createRedisOperations<String, Long>()
-	private val setOps = factory.createRedisSetOperations<String, Long>()
+	private val ops = factory.createRedisOperations(String::class.java, valueClass)
+	private val setOps = factory.createRedisSetOperations(String::class.java, valueClass)
 
 	private fun key(groupId: Long): String {
 		return "$keyPrefix:$groupId"
 	}
 
-	fun addElements(groupId: Long, elements: Collection<Long>): Mono<Long> {
-		return setOps.add(key(groupId), *elements.toTypedArray())
+	fun addElements(groupId: Long, vararg elements: V): Mono<Long> {
+		return setOps.add(key(groupId), *elements)
 	}
 
-	fun removeElements(groupId: Long, elements: Collection<Long>): Mono<Long> {
-		return setOps.remove(key(groupId), *elements.toTypedArray())
+	fun removeElements(groupId: Long, vararg elements: V): Mono<Long> {
+		return setOps.remove(key(groupId), *elements)
 	}
 
 	fun countElementsInGroup(groupId: Long): Mono<Long> {
 		return setOps.size(key(groupId))
 	}
 
-	fun getElementsInGroup(groupId: Long): Flux<Long> {
+	fun getElementsInGroup(groupId: Long): Flux<V> {
 		return setOps.members(key(groupId))
 	}
 
-	fun getElementsInGroups(groupIds: Collection<Long>): Flux<Long> {
+	fun getElementsInGroups(groupIds: Collection<Long>): Flux<V> {
 		return setOps.union(groupIds.map { key(it) })
 	}
 

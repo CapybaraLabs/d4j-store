@@ -13,7 +13,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	private val messageOps = factory.createRedisHashOperations<String, Long, MessageData>()
 
 	private val shardIndex = twoWayIndex("$messageKey:shard-index", factory)
-	private val channelIndex = OneWayIndex("$messageKey:channel-index", factory)
+	private val channelIndex = oneWayIndex("$messageKey:channel-index", factory)
 	private val channelShardIndex = twoWayIndex("$messageKey:channel-shard-index", factory)
 
 	override fun save(message: MessageData, shardId: Int): Mono<Void> {
@@ -22,7 +22,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 			val channelId = message.channelId().asLong()
 
 			val addToShardIndex = shardIndex.addElements(shardId, listOf(messageId))
-			val addToChannelIndex = channelIndex.addElements(channelId, listOf(messageId))
+			val addToChannelIndex = channelIndex.addElements(channelId, messageId)
 			val addToChannelShardIndex = channelShardIndex.addElements(shardId, listOf(channelId))
 
 			val save = messageOps.put(messageKey, messageId, message)
@@ -38,7 +38,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 	override fun deleteByIds(messageIds: List<Long>, channelId: Long): Mono<Long> {
 		return Mono.defer {
 			val removeFromShardIndex = shardIndex.removeElements(*messageIds.toTypedArray())
-			val removeFromChannelIndex = channelIndex.removeElements(channelId, messageIds)
+			val removeFromChannelIndex = channelIndex.removeElements(channelId, *messageIds.toTypedArray())
 
 			val remove = messageOps.remove(messageKey, *messageIds.toTypedArray())
 

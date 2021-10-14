@@ -20,13 +20,14 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
 
 	private val shardIndex = twoWayIndex("$channelKey:shard-index", factory)
-	private val guildIndex = OneWayIndex("$channelKey:guild-index", factory)
+	private val guildIndex = oneWayIndex("$channelKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$channelKey:guild-shard-index", factory)
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
 	}
 
+	// TODO add guildid to signature and simplify code
 	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		if (channels.isEmpty()) {
 			return Mono.empty()
@@ -39,7 +40,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 				channels
 					.filter { it.guildId().isPresent() }
 					.groupBy { it.guildId().get().asLong() }
-					.map { guildIndex.addElements(it.key, it.value.map { ch -> ch.id().asLong() }) }
+					.map { guildIndex.addElements(it.key, *it.value.map { ch -> ch.id().asLong() }.toTypedArray()) }
 			).flatMap { it }
 
 			val guilIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
@@ -57,7 +58,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		return Mono.defer {
 			val removeChannel = channelOps.remove(channelKey, channelId)
 			val removeFromShardIndex = shardIndex.removeElements(channelId)
-			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, listOf(channelId)) else Mono.empty()
+			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, channelId) else Mono.empty()
 
 			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
 				.then(removeChannel)

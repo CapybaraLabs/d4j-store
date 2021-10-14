@@ -106,6 +106,8 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val deleteChannelReturningOld = repos.channels.getChannelById(channelId)
 			.flatMap { oldChannel -> repos.channels.delete(channelId, guildId?.asLong()).thenReturn(oldChannel) }
 
+		// TODO delete voice states in channel?
+
 		return removeChannelFromGuild
 			.and(deleteMessagesInChannel)
 			.then(deleteChannelReturningOld)

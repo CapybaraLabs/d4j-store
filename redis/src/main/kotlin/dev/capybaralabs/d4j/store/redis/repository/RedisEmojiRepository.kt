@@ -19,7 +19,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	private val emojiOps = factory.createRedisHashOperations<String, Long, EmojiData>()
 
 	private val shardIndex = twoWayIndex("$emojiKey:shard-index", factory)
-	private val guildIndex = OneWayIndex("$emojiKey:guild-index", factory)
+	private val guildIndex = oneWayIndex("$emojiKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$emojiKey:guild-shard-index", factory)
 
 	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
@@ -35,7 +35,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 
 		return Mono.defer {
 			val addToShardIndex = shardIndex.addElements(shardId, ids)
-			val addToGuildIndex = guildIndex.addElements(guildId, ids)
+			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
 			val save = emojiOps.putAll(emojiKey, guildEmojis.associateBy { it.id().orElseThrow().asLong() }).then()
