@@ -38,11 +38,11 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}.blockLast()
 	}
 
-	override fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void> {
-		return saveAll(listOf(voiceState), shardId).then()
+	override fun save(voiceState: VoiceStateData, shardId: Int, guildId: Long): Mono<Void> {
+		return saveAll(listOf(voiceState), shardId, guildId).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int, guildId: Long): Mono<Void> {
 		if (voiceStates.isEmpty()) {
 			return Mono.empty()
 		}

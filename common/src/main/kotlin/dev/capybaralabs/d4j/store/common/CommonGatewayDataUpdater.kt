@@ -160,7 +160,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 
 		val saveVoiceStates = createData.voiceStates()
 			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
-			.let { repos.voiceStates.saveAll(it, shardId) }
+			.let { repos.voiceStates.saveAll(it, shardId, guildId) }
 
 		return saveGuild
 			.and(saveChannels)
@@ -777,7 +777,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val userId = voiceStateData.userId().asLong()
 
 		val saveNewOrRemove = if (voiceStateData.channelId().isPresent) {
-			repos.voiceStates.save(voiceStateData, shardId)
+			repos.voiceStates.save(voiceStateData, shardId, guildId)
 		} else {
 			repos.voiceStates.deleteById(guildId, userId)
 		}

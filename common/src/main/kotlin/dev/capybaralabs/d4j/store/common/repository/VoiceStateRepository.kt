@@ -5,8 +5,8 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface VoiceStateRepository {
-	fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void>
-	fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void>
+	fun save(voiceState: VoiceStateData, shardId: Int, guildId: Long): Mono<Void>
+	fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int, guildId: Long): Mono<Void>
 
 	fun deleteById(guildId: Long, userId: Long): Mono<Long>
 	fun deleteByGuildId(guildId: Long): Mono<Long>
