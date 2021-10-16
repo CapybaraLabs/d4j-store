@@ -323,11 +323,11 @@ internal class ShardTest(storeLayout: StoreLayout) {
 		assertThat(accessor.getUserById(userIdB).block()).isNotNull
 	}
 
-	private fun createChannel(shardIndex: Int, channelId: Long) {
+	private fun createChannel(shardId: Int, channelId: Long) {
 		val channelCreate = ChannelCreate.builder()
 			.channel(channel(channelId).build())
 			.build()
 
-		updater.onChannelCreate(shardIndex, channelCreate).block()
+		updater.onChannelCreate(shardId, channelCreate).block()
 	}
 }

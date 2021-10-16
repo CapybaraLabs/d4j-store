@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.UserRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -31,7 +32,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 					CONSTRAINT d4j_discord_user_pkey PRIMARY KEY (user_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
@@ -39,13 +40,13 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		return saveAll(listOf(user)).then()
 	}
 
-	override fun saveAll(users: List<UserData>): Flux<Int> {
+	override fun saveAll(users: List<UserData>): Mono<Void> {
 		if (users.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_user VALUES ($1, $2 ::jsonb)
@@ -58,17 +59,17 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 						.bind("$2", serde.serializeToString(user))
 						.add()
 				}
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}
 
-	override fun deleteById(userId: Long): Mono<Int> {
+	override fun deleteById(userId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_user WHERE user_id = $1")
 					.bind("$1", userId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

@@ -5,12 +5,16 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface EmojiRepository {
-	fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void>
-	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int>
-	fun deleteByIds(emojiIds: List<Long>): Mono<Int>
-	fun deleteByShardIndex(shardIndex: Int): Mono<Int>
+	fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void>
+	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void>
+
+	fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long>
+	fun deleteByGuildId(guildId: Long): Mono<Long>
+	fun deleteByShardId(shardId: Int): Mono<Long>
+
 	fun countEmojis(): Mono<Long>
 	fun countEmojisInGuild(guildId: Long): Mono<Long>
+
 	fun getEmojis(): Flux<EmojiData>
 	fun getEmojisInGuild(guildId: Long): Flux<EmojiData>
 	fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData>

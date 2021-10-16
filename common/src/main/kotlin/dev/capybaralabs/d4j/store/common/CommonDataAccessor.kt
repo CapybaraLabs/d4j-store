@@ -24,6 +24,9 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
+// 		TODO consider alternative
+//		return repositories.guilds.getGuildById(guildId)
+//			.map { it.channels().size.toLong() }
 		return repositories.channels.countChannelsInGuild(guildId)
 	}
 
@@ -33,6 +36,9 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countEmojisInGuild(guildId: Long): Mono<Long> {
+// 		TODO consider alternative
+//		return repositories.guilds.getGuildById(guildId)
+//			.map { it.emojis().size.toLong() }
 		return repositories.emojis.countEmojisInGuild(guildId)
 	}
 
@@ -47,6 +53,9 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countMembersInGuild(guildId: Long): Mono<Long> {
+// 		TODO consider alternative
+//		return repositories.guilds.getGuildById(guildId)
+//			.map { it.members().size.toLong() }
 		return repositories.members.countMembersInGuild(guildId)
 	}
 
@@ -78,6 +87,9 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countRolesInGuild(guildId: Long): Mono<Long> {
+// 		TODO consider alternative
+//		return repositories.guilds.getGuildById(guildId)
+//			.map { it.roles().size.toLong() }
 		return repositories.roles.countRolesInGuild(guildId)
 	}
 

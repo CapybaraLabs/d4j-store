@@ -47,8 +47,8 @@ internal fun Publisher<out Result>.mapToCount(): Mono<Long> {
 internal fun Flux<out Result>.consume(): Flux<Int> = flatMap { it.rowsUpdated }
 
 // these are a bunch of convenience methods to achieve that
-internal fun Statement.executeConsuming(): Flux<Int> = execute().toFlux().consume()
-internal fun Statement.executeConsumingSingle(): Mono<Int> = executeConsuming().toMono()
+internal fun Statement.executeConsumingAll(): Flux<Int> = execute().toFlux().consume()
+internal fun Statement.executeConsumingSingle(): Mono<Int> = executeConsumingAll().toMono()
 
 
 /**

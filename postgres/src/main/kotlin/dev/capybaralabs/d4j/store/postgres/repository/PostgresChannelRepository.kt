@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,22 +33,22 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					CONSTRAINT d4j_discord_channel_pkey PRIMARY KEY (channel_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
-	override fun save(channel: ChannelData, shardIndex: Int): Mono<Void> {
+	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return Mono.defer {
-			saveAll(listOf(channel), shardIndex).then()
+			saveAll(listOf(channel), shardId)
 		}
 	}
 
-	override fun saveAll(channels: List<ChannelData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		if (channels.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
-		return Flux.defer {
-			withConnectionMany(factory) { connection ->
+		return Mono.defer {
+			withConnection(factory) { connection ->
 				var statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3::jsonb, $4)
@@ -66,43 +67,43 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					}
 					statement
 						.bind("$3", serde.serializeToString(channel))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 
 					statement.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}
 
-	override fun delete(channelId: Long): Mono<Int> {
+	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = $1")
 					.bind("$1", channelId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByIds(channelIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = ANY($1)")
-					.bind("$1", channelIds.toTypedArray())
-					.executeConsumingSingle()
+				it.createStatement("DELETE FROM d4j_discord_channel WHERE guild_id = $1")
+					.bind("$1", guildId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE shard_index = $1")
-					.bind("$1", shardIndex)
-					.executeConsumingSingle()
+					.bind("$1", shardId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.GuildRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -31,11 +32,11 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 					CONSTRAINT d4j_discord_guild_pkey PRIMARY KEY (guild_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
-	override fun save(guild: GuildData, shardIndex: Int): Mono<Void> {
+	override fun save(guild: GuildData, shardId: Int): Mono<Void> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement(
@@ -46,19 +47,19 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 				)
 					.bind("$1", guild.id().asLong())
 					.bind("$2", serde.serializeToString(guild))
-					.bind("$3", shardIndex)
+					.bind("$3", shardId)
 					.executeConsumingSingle().then()
 			}
 		}
 	}
 
 
-	override fun delete(guildId: Long): Mono<Int> {
+	override fun delete(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE guild_id = $1")
 					.bind("$1", guildId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
@@ -75,12 +76,12 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 //		}
 //	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE shard_index = $1")
-					.bind("$1", shardIndex)
-					.executeConsumingSingle()
+					.bind("$1", shardId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

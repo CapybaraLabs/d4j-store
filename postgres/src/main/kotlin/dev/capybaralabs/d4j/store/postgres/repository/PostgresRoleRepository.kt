@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.RoleRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,21 +33,21 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, role: RoleData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardIndex).then()
+	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(role), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
 		if (roles.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
@@ -59,41 +60,41 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 						.bind("$1", role.id().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(role))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}
 
-	override fun deleteById(roleId: Long): Mono<Int> {
+	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByIds(roleIds: List<Long>): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it
-					.createStatement("DELETE FROM d4j_discord_role WHERE role_id = ANY($1)")
-					.bind("$1", roleIds.toTypedArray())
-					.executeConsumingSingle()
+					.createStatement("DELETE FROM d4j_discord_role WHERE guild_id = $1")
+					.bind("$1", guildId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
-					.bind("$1", shardIndex)
-					.executeConsumingSingle()
+					.bind("$1", shardId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

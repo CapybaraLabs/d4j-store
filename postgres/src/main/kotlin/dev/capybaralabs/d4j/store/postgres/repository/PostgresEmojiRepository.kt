@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,22 +33,22 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 					CONSTRAINT d4j_discord_emoji_pkey PRIMARY KEY (emoji_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, emoji: EmojiData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardIndex).then()
+	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(emoji), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void> {
 		val guildEmojis = emojis.filter { it.id().isPresent }
 		if (guildEmojis.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3::jsonb, $4)
@@ -60,31 +61,42 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 						.bind("$1", guildEmoji.id().get().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(guildEmoji))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}
 
-	override fun deleteByIds(emojiIds: List<Long>): Mono<Int> {
+	override fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1)")
+				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1) AND guild_id = $2")
 					.bind("$1", emojiIds.toTypedArray())
-					.executeConsumingSingle()
+					.bind("$2", guildId)
+					.executeConsumingSingle().toLong()
+			}
+		}
+	}
+
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
+		return Mono.defer {
+			withConnection(factory) {
+				it.createStatement("DELETE FROM d4j_discord_emoji WHERE guild_id = $1")
+					.bind("$1", guildId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE shard_index = $1")
-					.bind("$1", shardIndex)
-					.executeConsumingSingle()
+					.bind("$1", shardId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}

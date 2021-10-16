@@ -63,9 +63,9 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	private val selfUser = AtomicReference<UserData?>()
 
 
-	override fun onChannelCreate(shardIndex: Int, dispatch: ChannelCreate): Mono<Void> {
+	override fun onChannelCreate(shardId: Int, dispatch: ChannelCreate): Mono<Void> {
 		val channel = dispatch.channel()
-		val saveChannel = repos.channels.save(channel, shardIndex)
+		val saveChannel = repos.channels.save(channel, shardId)
 		val guildId = channel.guildId().toOptional()
 		var addChannelToGuild = Mono.empty<Void>()
 		if (guildId.isPresent) {
@@ -76,27 +76,27 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 						.addChannel(channel.id()) // TODO use deduplication?
 						.build()
 				}
-				.flatMap { repos.guilds.save(it, shardIndex) }
+				.flatMap { repos.guilds.save(it, shardId) }
 		}
 
 		return saveChannel.and(addChannelToGuild)
 	}
 
-	override fun onChannelDelete(shardIndex: Int, dispatch: ChannelDelete): Mono<ChannelData> {
+	override fun onChannelDelete(shardId: Int, dispatch: ChannelDelete): Mono<ChannelData> {
 		val channel = dispatch.channel()
 		val channelId = channel.id().asLong()
-		val guildId = channel.guildId().toOptional()
+		val guildId: Id? = channel.guildId().toOptional().orElse(null)
 
-		val removeChannelFromGuild = when (guildId.isPresent) {
+		val removeChannelFromGuild = when (guildId != null) {
 			true -> {
-				repos.guilds.getGuildById(guildId.get().asLong())
+				repos.guilds.getGuildById(guildId.asLong())
 					.map { guildData ->
 						GuildData.builder()
 							.from(guildData)
 							.channels(guildData.channels().toList() - channel.id())
 							.build()
 					}
-					.flatMap { repos.guilds.save(it, shardIndex) }
+					.flatMap { repos.guilds.save(it, shardId) }
 			}
 			false -> Mono.empty()
 		}
@@ -104,17 +104,19 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val deleteMessagesInChannel = repos.messages.deleteByChannelId(channelId)
 
 		val deleteChannelReturningOld = repos.channels.getChannelById(channelId)
-			.flatMap { oldChannel -> repos.channels.delete(channelId).thenReturn(oldChannel) }
+			.flatMap { oldChannel -> repos.channels.delete(channelId, guildId?.asLong()).thenReturn(oldChannel) }
+
+		// TODO delete voice states in channel?
 
 		return removeChannelFromGuild
 			.and(deleteMessagesInChannel)
 			.then(deleteChannelReturningOld)
 	}
 
-	override fun onChannelUpdate(shardIndex: Int, dispatch: ChannelUpdate): Mono<ChannelData> {
+	override fun onChannelUpdate(shardId: Int, dispatch: ChannelUpdate): Mono<ChannelData> {
 		val channel = dispatch.channel()
 
-		val saveNew: Mono<Void> = repos.channels.save(channel, shardIndex)
+		val saveNew: Mono<Void> = repos.channels.save(channel, shardId)
 
 		return repos.channels.getChannelById(channel.id().asLong())
 			.flatMap { saveNew.thenReturn(it) }
@@ -122,7 +124,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	}
 
 
-	override fun onGuildCreate(shardIndex: Int, dispatch: GuildCreate): Mono<Void> {
+	override fun onGuildCreate(shardId: Int, dispatch: GuildCreate): Mono<Void> {
 		val createData = dispatch.guild()
 		val guild = GuildData.builder()
 			.from(createData)
@@ -133,15 +135,15 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.build()
 		val guildId = guild.id().asLong()
 
-		val saveGuild = repos.guilds.save(guild, shardIndex)
+		val saveGuild = repos.guilds.save(guild, shardId)
 
 		val saveChannels = createData.channels()
 			.map { ChannelData.builder().from(it).guildId(guildId).build() }
-			.let { repos.channels.saveAll(it, shardIndex) }
+			.let { repos.channels.saveAll(it, shardId) }
 
-		val saveEmojis = createData.emojis().let { repos.emojis.saveAll(guildId, it, shardIndex) }
-		val saveMembers = createData.members().let { repos.members.saveAll(guildId, it, shardIndex) }
-		val savePresences = createData.presences().let { repos.presences.saveAll(guildId, it, shardIndex) }
+		val saveEmojis = createData.emojis().let { repos.emojis.saveAll(guildId, it, shardId) }
+		val saveMembers = createData.members().let { repos.members.saveAll(guildId, it, shardId) }
+		val savePresences = createData.presences().let { repos.presences.saveAll(guildId, it, shardId) }
 
 		// TODO why? addGuildMember does not create any presences
 		val saveOfflinePresences = Flux.fromIterable(createData.members())
@@ -150,15 +152,15 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.hasElement().map { !it }
 			}
 			// TODO add bulk operations
-			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
+			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardId) }
 			.then()
 
-		val saveRoles = createData.roles().let { repos.roles.saveAll(guildId, it, shardIndex) }
+		val saveRoles = createData.roles().let { repos.roles.saveAll(guildId, it, shardId) }
 		val saveUsers = createData.members().map { it.user() }.let { repos.users.saveAll(it) }
 
 		val saveVoiceStates = createData.voiceStates()
 			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
-			.let { repos.voiceStates.saveAll(it, shardIndex) }
+			.let { repos.voiceStates.saveAll(it, shardId, guildId) }
 
 		return saveGuild
 			.and(saveChannels)
@@ -199,17 +201,14 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.build()
 	}
 
-	override fun onGuildDelete(shardIndex: Int, dispatch: GuildDelete): Mono<GuildData> {
+	override fun onGuildDelete(shardId: Int, dispatch: GuildDelete): Mono<GuildData> {
 		val guildId = dispatch.guild().id().asLong()
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMap { guild ->
-				val channelIds = guild.channels().map { it.asLong() }
-				val roleIds = guild.roles().map { it.asLong() }
-				val emojiIds = guild.emojis().map { it.asLong() }
-				val deleteChannels = repos.channels.deleteByIds(channelIds)
-				val deleteRoles = repos.roles.deleteByIds(roleIds)
-				val deleteEmojis = repos.emojis.deleteByIds(emojiIds)
+				val deleteChannels = repos.channels.deleteByGuildId(guildId)
+				val deleteRoles = repos.roles.deleteByGuildId(guildId)
+				val deleteEmojis = repos.emojis.deleteByGuildId(guildId)
 				val deleteMembers = repos.members.deleteByGuildId(guildId)
 				val deleteMessages = repos.messages.deleteByChannelIds(guild.channels().map { it.asLong() })
 				// TODO delete no longer visible users
@@ -227,7 +226,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.flatMap { repos.guilds.delete(guildId).thenReturn(it) }
 	}
 
-	override fun onGuildEmojisUpdate(shardIndex: Int, dispatch: GuildEmojisUpdate): Mono<Set<EmojiData>> {
+	override fun onGuildEmojisUpdate(shardId: Int, dispatch: GuildEmojisUpdate): Mono<Set<EmojiData>> {
 		val guildId = dispatch.guildId().asLong()
 
 		// TODO granular updates, loading the object and saving it back is suboptimal?
@@ -237,19 +236,19 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				.from(oldGuild)
 				.emojis(dispatch.emojis().mapNotNull { it.id().orElse(null) })
 				.build()
-			repos.guilds.save(updated, shardIndex)
+			repos.guilds.save(updated, shardId)
 		}
 
-		val deleteEmojis: (GuildData) -> Mono<Int> = { oldGuild: GuildData ->
+		val deleteEmojis: (GuildData) -> Mono<Long> = { oldGuild: GuildData ->
 			// delete those emojis that are in the old guild but not the dispatch
 			val toDelete = oldGuild.emojis()
 				.filter { id -> dispatch.emojis().none { emoji -> emoji.id().isPresent && emoji.id().get() == id } }
 				.map { it.asLong() }
-			repos.emojis.deleteByIds(toDelete)
+			repos.emojis.deleteByIds(toDelete, guildId)
 		}
 
 		val saveEmojis = dispatch.emojis()
-			.let { repos.emojis.saveAll(guildId, it, shardIndex) }
+			.let { repos.emojis.saveAll(guildId, it, shardId) }
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
@@ -265,7 +264,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.collectList().map { it.toSet() }
 	}
 
-	override fun onGuildMemberAdd(shardIndex: Int, dispatch: GuildMemberAdd): Mono<Void> {
+	override fun onGuildMemberAdd(shardId: Int, dispatch: GuildMemberAdd): Mono<Void> {
 		val guildId = dispatch.guildId().asLong()
 		val member = dispatch.member()
 		val user = member.user()
@@ -279,9 +278,9 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.memberCount(it.memberCount() + 1)
 					.build()
 			}
-			.flatMap { repos.guilds.save(it, shardIndex) }// TODO granular update
+			.flatMap { repos.guilds.save(it, shardId) }// TODO granular update
 
-		val saveMember = repos.members.save(guildId, member, shardIndex)
+		val saveMember = repos.members.save(guildId, member, shardId)
 		val saveUser = repos.users.save(user)
 
 		return addMemberToGuild
@@ -289,7 +288,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.and(saveUser)
 	}
 
-	override fun onGuildMemberRemove(shardIndex: Int, dispatch: GuildMemberRemove): Mono<MemberData> {
+	override fun onGuildMemberRemove(shardId: Int, dispatch: GuildMemberRemove): Mono<MemberData> {
 		val guildId = dispatch.guildId().asLong()
 		val userData = dispatch.user()
 		val userId = userData.id().asLong()
@@ -303,15 +302,15 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.memberCount(it.memberCount() - 1)
 					.build()
 			}
-			.flatMap { repos.guilds.save(it, shardIndex) }
+			.flatMap { repos.guilds.save(it, shardId) }
 
 		val getMember = repos.members.getMemberById(guildId, userId)
 		val deleteMember = repos.members.deleteById(guildId, userId)
 		val deletePresence = repos.presences.deleteById(guildId, userId)
 
-		val deleteOrphanUser = repos.members.getMembersByUserId(userId) // TODO consider method that loads less data
+		val deleteOrphanUser = repos.members.getMembersByUserId(userId)
 			.filter { it.first != guildId }
-			.hasElements()
+			.hasElements() // short circuit keeps this a low impact call
 			.flatMap { hasMutualServers ->
 				if (hasMutualServers) Mono.empty()
 				else repos.users.deleteById(userId)
@@ -324,7 +323,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.switchIfEmpty(deletions.then(Mono.empty()))
 	}
 
-	override fun onGuildMembersChunk(shardIndex: Int, dispatch: GuildMembersChunk): Mono<Void> {
+	override fun onGuildMembersChunk(shardId: Int, dispatch: GuildMembersChunk): Mono<Void> {
 		val guildId = dispatch.guildId().asLong()
 		val members = dispatch.members()
 
@@ -336,9 +335,9 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.members(sumDistinct(it.members(), members.map { member -> member.user().id() }))
 					.build()
 			}
-			.flatMap { repos.guilds.save(it, shardIndex) }
+			.flatMap { repos.guilds.save(it, shardId) }
 
-		val saveMembers = members.let { repos.members.saveAll(guildId, it, shardIndex) }
+		val saveMembers = members.let { repos.members.saveAll(guildId, it, shardId) }
 		val saveUsers = members.map { it.user() }.let { repos.users.saveAll(it) }
 
 		// TODO why? addGuildMember does not create any presences
@@ -348,7 +347,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.hasElement().map { !it }
 			}
 			// TODO add bulk operations
-			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardIndex) }
+			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardId) }
 			.then()
 
 		return addMemberIds
@@ -357,7 +356,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.and(saveOfflinePresences)
 	}
 
-	override fun onGuildMemberUpdate(shardIndex: Int, dispatch: GuildMemberUpdate): Mono<MemberData> {
+	override fun onGuildMemberUpdate(shardId: Int, dispatch: GuildMemberUpdate): Mono<MemberData> {
 		val guildId = dispatch.guildId().asLong()
 		val userId = dispatch.user().id().asLong()
 
@@ -372,12 +371,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.premiumSince(dispatch.premiumSince())
 					.pending(dispatch.pending())
 					.build()
-				repos.members.save(guildId, newMember, shardIndex)
+				repos.members.save(guildId, newMember, shardId)
 					.thenReturn(oldMember)
 			}
 	}
 
-	override fun onGuildRoleCreate(shardIndex: Int, dispatch: GuildRoleCreate): Mono<Void> {
+	override fun onGuildRoleCreate(shardId: Int, dispatch: GuildRoleCreate): Mono<Void> {
 		val guildId = dispatch.guildId().asLong()
 		val role = dispatch.role()
 
@@ -388,14 +387,14 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.addRole(role.id())
 					.build()
 			}
-			.flatMap { repos.guilds.save(it, shardIndex) }
+			.flatMap { repos.guilds.save(it, shardId) }
 
-		val saveRole = repos.roles.save(guildId, role, shardIndex)
+		val saveRole = repos.roles.save(guildId, role, shardId)
 
 		return addRoleId.and(saveRole)
 	}
 
-	override fun onGuildRoleDelete(shardIndex: Int, dispatch: GuildRoleDelete): Mono<RoleData> {
+	override fun onGuildRoleDelete(shardId: Int, dispatch: GuildRoleDelete): Mono<RoleData> {
 		val guildId = dispatch.guildId().asLong()
 		val roleId = dispatch.roleId().asLong()
 
@@ -408,9 +407,9 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.roles(guild.roles().toList() - dispatch.roleId())
 					.build()
 			}
-			.flatMap { repos.guilds.save(it, shardIndex) }
+			.flatMap { repos.guilds.save(it, shardId) }
 
-		val deleteRole = repos.roles.deleteById(roleId)
+		val deleteRole = repos.roles.deleteById(roleId, guildId)
 
 		val removeRoleFromMembers = repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
@@ -427,7 +426,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.build()
 			}
 			// TODO add bulk operation
-			.flatMap { repos.members.save(guildId, it, shardIndex) }
+			.flatMap { repos.members.save(guildId, it, shardId) }
 			.then()
 
 		val deletions = Mono.`when`(removeRoleId, deleteRole, removeRoleFromMembers)
@@ -437,19 +436,19 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.switchIfEmpty(deletions.then(Mono.empty()))
 	}
 
-	override fun onGuildRoleUpdate(shardIndex: Int, dispatch: GuildRoleUpdate): Mono<RoleData?> {
+	override fun onGuildRoleUpdate(shardId: Int, dispatch: GuildRoleUpdate): Mono<RoleData?> {
 		val role = dispatch.role()
 		val roleId = role.id().asLong()
 		val guildId = dispatch.guildId().asLong()
 
-		val saveNew = repos.roles.save(guildId, role, shardIndex)
+		val saveNew = repos.roles.save(guildId, role, shardId)
 
 		return repos.roles.getRoleById(roleId)
 			.flatMap { saveNew.thenReturn(it) }
 			.switchIfEmpty(saveNew.then(Mono.empty()))
 	}
 
-	override fun onGuildUpdate(shardIndex: Int, dispatch: GuildUpdate): Mono<GuildData> {
+	override fun onGuildUpdate(shardId: Int, dispatch: GuildUpdate): Mono<GuildData> {
 		val guildId = dispatch.guild().id().asLong()
 
 		return repos.guilds.getGuildById(guildId)
@@ -467,30 +466,30 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.build()
 
 				repos.guilds
-					.save(newGuildData, shardIndex)
+					.save(newGuildData, shardId)
 					.thenReturn(oldGuildData)
 			}
 	}
 
-	override fun onShardInvalidation(shardIndex: Int, cause: InvalidationCause): Mono<Void> {
-		val deleteChannels = repos.channels.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it channels on shard $shardIndex") }
-		val deleteEmojis = repos.emojis.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it emojis on shard $shardIndex") }
-		val deleteGuilds = repos.guilds.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it guilds on shard $shardIndex") }
-		val deleteMembers = repos.members.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it members on shard $shardIndex") }
-		val deleteOrphanedUsers = repos.deleteOrphanedUsers(shardIndex)
+	override fun onShardInvalidation(shardId: Int, cause: InvalidationCause): Mono<Void> {
+		val deleteChannels = repos.channels.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it channels on shard $shardId") }
+		val deleteEmojis = repos.emojis.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it emojis on shard $shardId") }
+		val deleteGuilds = repos.guilds.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it guilds on shard $shardId") }
+		val deleteMembers = repos.members.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it members on shard $shardId") }
+		val deleteOrphanedUsers = repos.deleteOrphanedUsers(shardId)
 		// TODO message cache is probably safe to be kept and should follow different kinds of cache rules
-		val deleteMessages = repos.messages.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it messages on shard $shardIndex") }
-		val deletePresenses = repos.presences.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it presences on shard $shardIndex") }
-		val deleteRoles = repos.roles.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it roles on shard $shardIndex") }
-		val deleteVoiceStates = repos.voiceStates.deleteByShardIndex(shardIndex)
-			.doOnNext { log.debug("Invalidated $it voice states on shard $shardIndex") }
+		val deleteMessages = repos.messages.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it messages on shard $shardId") }
+		val deletePresenses = repos.presences.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it presences on shard $shardId") }
+		val deleteRoles = repos.roles.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it roles on shard $shardId") }
+		val deleteVoiceStates = repos.voiceStates.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it voice states on shard $shardId") }
 
 
 		return Mono.`when`(
@@ -505,11 +504,11 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		)
 	}
 
-	override fun onMessageCreate(shardIndex: Int, dispatch: MessageCreate): Mono<Void> {
+	override fun onMessageCreate(shardId: Int, dispatch: MessageCreate): Mono<Void> {
 		val message = dispatch.message()
 		val channelId = message.channelId().asLong()
 
-		val saveMessage = repos.messages.save(message, shardIndex)
+		val saveMessage = repos.messages.save(message, shardId)
 
 		val editLastMessageId = repos.channels.getChannelById(channelId)
 			.map {
@@ -518,28 +517,30 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.lastMessageId(message.id())
 					.build()
 			}
-			.flatMap { repos.channels.save(it, shardIndex) }
+			.flatMap { repos.channels.save(it, shardId) }
 
 		return saveMessage.and(editLastMessageId)
 	}
 
-	override fun onMessageDelete(shardIndex: Int, dispatch: MessageDelete): Mono<MessageData> {
+	override fun onMessageDelete(shardId: Int, dispatch: MessageDelete): Mono<MessageData> {
 		val messageId = dispatch.id().asLong()
+		val channelId = dispatch.channelId().asLong()
 		return repos.messages.getMessageById(messageId)
-			.flatMap { repos.messages.delete(messageId).thenReturn(it) }
+			.flatMap { repos.messages.delete(messageId, channelId).thenReturn(it) }
 	}
 
-	override fun onMessageDeleteBulk(shardIndex: Int, dispatch: MessageDeleteBulk): Mono<Set<MessageData>> {
+	override fun onMessageDeleteBulk(shardId: Int, dispatch: MessageDeleteBulk): Mono<Set<MessageData>> {
 		val messageIds = dispatch.ids().map { it.asLong() }
+		val channelId = dispatch.channelId().asLong()
 
-		val deleteMessages = repos.messages.deleteByIds(messageIds)
+		val deleteMessages = repos.messages.deleteByIds(messageIds, channelId)
 
 		return repos.messages.getMessagesByIds(messageIds)
 			.collectList().map { it.toSet() }
 			.flatMap { deleteMessages.thenReturn(it) }
 	}
 
-	override fun onMessageReactionAdd(shardIndex: Int, dispatch: MessageReactionAdd): Mono<Void> {
+	override fun onMessageReactionAdd(shardId: Int, dispatch: MessageReactionAdd): Mono<Void> {
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
 
@@ -586,10 +587,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				}
 				newMessageBuilder.build()
 			}
-			.flatMap { repos.messages.save(it, shardIndex) }
+			.flatMap { repos.messages.save(it, shardId) }
 	}
 
-	override fun onMessageReactionRemove(shardIndex: Int, dispatch: MessageReactionRemove): Mono<Void> {
+	override fun onMessageReactionRemove(shardId: Int, dispatch: MessageReactionRemove): Mono<Void> {
 		val userId = dispatch.userId().asLong()
 		val messageId = dispatch.messageId().asLong()
 
@@ -629,10 +630,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				}
 				Mono.empty() // avoid writing when there are no changes
 			}
-			.flatMap { repos.messages.save(it, shardIndex) }
+			.flatMap { repos.messages.save(it, shardId) }
 	}
 
-	override fun onMessageReactionRemoveAll(shardIndex: Int, dispatch: MessageReactionRemoveAll): Mono<Void> {
+	override fun onMessageReactionRemoveAll(shardId: Int, dispatch: MessageReactionRemoveAll): Mono<Void> {
 		val messageId = dispatch.messageId().asLong()
 
 		return repos.messages.getMessageById(messageId)
@@ -642,10 +643,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.reactions(Possible.absent())
 					.build()
 			}
-			.flatMap { repos.messages.save(it, shardIndex) }
+			.flatMap { repos.messages.save(it, shardId) }
 	}
 
-	override fun onMessageReactionRemoveEmoji(shardIndex: Int, dispatch: MessageReactionRemoveEmoji): Mono<Void> {
+	override fun onMessageReactionRemoveEmoji(shardId: Int, dispatch: MessageReactionRemoveEmoji): Mono<Void> {
 		val messageId = dispatch.messageId().asLong()
 
 		return repos.messages.getMessageById(messageId)
@@ -669,10 +670,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				}
 				return@flatMap Mono.just(newMessageBuilder.build())
 			}
-			.flatMap { repos.messages.save(it, shardIndex) }
+			.flatMap { repos.messages.save(it, shardId) }
 	}
 
-	override fun onMessageUpdate(shardIndex: Int, dispatch: MessageUpdate): Mono<MessageData> {
+	override fun onMessageUpdate(shardId: Int, dispatch: MessageUpdate): Mono<MessageData> {
 		val messageData = dispatch.message()
 		val messageId = messageData.id().asLong()
 
@@ -699,12 +700,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					)
 					.editedTimestamp(messageData.editedTimestamp())
 					.build()
-				repos.messages.save(newMessageData, shardIndex)
+				repos.messages.save(newMessageData, shardId)
 					.thenReturn(oldMessageData)
 			}
 	}
 
-	override fun onPresenceUpdate(shardIndex: Int, dispatch: PresenceUpdate): Mono<PresenceAndUserData> {
+	override fun onPresenceUpdate(shardId: Int, dispatch: PresenceUpdate): Mono<PresenceAndUserData> {
 		val guildId = dispatch.guildId().asLong()
 		val userData = dispatch.user()
 		val userId = userData.id().asLong()
@@ -715,7 +716,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.clientStatus(dispatch.clientStatus())
 			.build()
 
-		val saveNew = repos.presences.save(guildId, presenceData, shardIndex)
+		val saveNew = repos.presences.save(guildId, presenceData, shardId)
 
 		val savePresence = repos.presences.getPresenceById(guildId, userId)
 			.flatMap { saveNew.thenReturn(it) }
@@ -755,7 +756,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		return repos.users.save(userData)
 	}
 
-	override fun onUserUpdate(shardIndex: Int, dispatch: UserUpdate): Mono<UserData> {
+	override fun onUserUpdate(shardId: Int, dispatch: UserUpdate): Mono<UserData> {
 		val userData = dispatch.user()
 		val userId = userData.id().asLong()
 
@@ -766,14 +767,14 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.switchIfEmpty(saveNew.then(Mono.empty()))
 	}
 
-	override fun onVoiceStateUpdateDispatch(shardIndex: Int, dispatch: VoiceStateUpdateDispatch): Mono<VoiceStateData> {
+	override fun onVoiceStateUpdateDispatch(shardId: Int, dispatch: VoiceStateUpdateDispatch): Mono<VoiceStateData> {
 		val voiceStateData = dispatch.voiceState()
 
 		val guildId = voiceStateData.guildId().get().asLong()
 		val userId = voiceStateData.userId().asLong()
 
 		val saveNewOrRemove = if (voiceStateData.channelId().isPresent) {
-			repos.voiceStates.save(voiceStateData, shardIndex)
+			repos.voiceStates.save(voiceStateData, shardId, guildId)
 		} else {
 			repos.voiceStates.deleteById(guildId, userId)
 		}

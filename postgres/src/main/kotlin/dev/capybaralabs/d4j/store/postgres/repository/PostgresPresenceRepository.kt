@@ -1,10 +1,11 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.PresenceRepository
+import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
 import dev.capybaralabs.d4j.store.postgres.deserializeManyFromData
 import dev.capybaralabs.d4j.store.postgres.deserializeOneFromData
-import dev.capybaralabs.d4j.store.postgres.executeConsuming
+import dev.capybaralabs.d4j.store.postgres.executeConsumingAll
 import dev.capybaralabs.d4j.store.postgres.executeConsumingSingle
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
@@ -32,22 +33,22 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 					CONSTRAINT d4j_discord_presence_pkey PRIMARY KEY (guild_id, user_id)
 				)
 				""".trimIndent()
-			).executeConsuming()
+			).executeConsumingAll()
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, presence: PresenceData, shardIndex: Int): Mono<Void> {
-		return saveAll(guildId, listOf(presence), shardIndex).then()
+	override fun save(guildId: Long, presence: PresenceData, shardId: Int): Mono<Void> {
+		return saveAll(guildId, listOf(presence), shardId).then()
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardIndex: Int): Flux<Int> {
+	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void> {
 		if (presences.isEmpty()) {
-			return Flux.empty()
+			return Mono.empty()
 		}
 
-		return Flux.defer {
-			withConnectionMany(factory) {
+		return Mono.defer {
+			withConnection(factory) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3::jsonb, $4)
@@ -59,42 +60,42 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 						.bind("$1", presence.user().id().asLong())
 						.bind("$2", guildId)
 						.bind("$3", serde.serializeToString(presence))
-						.bind("$4", shardIndex)
+						.bind("$4", shardId)
 						.add()
 				}
 
-				statement.executeConsuming()
+				statement.executeConsumingAll().then()
 			}
 		}
 	}
 
-	override fun deleteById(guildId: Long, userId: Long): Mono<Int> {
+	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE guild_id = $1 AND user_id = $2")
 					.bind("$1", guildId)
 					.bind("$2", userId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByGuildId(guildId: Long): Mono<Int> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE guild_id = $1")
 					.bind("$1", guildId)
-					.executeConsumingSingle()
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
 
-	override fun deleteByShardIndex(shardIndex: Int): Mono<Int> {
+	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it.createStatement("DELETE FROM d4j_discord_presence WHERE shard_index = $1")
-					.bind("$1", shardIndex)
-					.executeConsumingSingle()
+					.bind("$1", shardId)
+					.executeConsumingSingle().toLong()
 			}
 		}
 	}
