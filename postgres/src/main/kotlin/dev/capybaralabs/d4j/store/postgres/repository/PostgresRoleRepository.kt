@@ -78,12 +78,12 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 	}
 
-	override fun deleteByGuildId(roleIds: List<Long>, guildId: Long): Mono<Long> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
 				it
-					.createStatement("DELETE FROM d4j_discord_role WHERE role_id = ANY($1)")
-					.bind("$1", roleIds.toTypedArray())
+					.createStatement("DELETE FROM d4j_discord_role WHERE guild_id = $1")
+					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
 			}
 		}

@@ -38,27 +38,34 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val save = emojiOps.putAll(guildEmojis.associateBy { it.id().orElseThrow().asLong() }).then()
+			val save = emojiOps.putAll(guildEmojis.associateBy { it.id().orElseThrow().asLong() })
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
 	}
 
-	override fun deleteByGuildId(emojiIds: List<Long>, guildId: Long): Mono<Long> {
+	override fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long> {
+		return Mono.defer {
+			val removeFromShardIndex = shardIndex.removeElements(*emojiIds.toTypedArray())
+			val deleteGuildIndexEntry = guildIndex.removeElements(guildId, *emojiIds.toTypedArray())
+
+			val remove = emojiOps.remove(*emojiIds.toTypedArray())
+
+			Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry)
+				.then(remove)
+		}
+	}
+
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		// TODO consider LUA script for atomicity
 		return Mono.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { idsInGuild ->
-					if (emojiIds != idsInGuild) {
-						log.warn("Guild index deviates from ids parameter: {} vs {}", idsInGuild, emojiIds)
-					}
-					val allIds = emojiIds + idsInGuild
-
-					val removeFromShardIndex = shardIndex.removeElements(*allIds.toTypedArray())
+				.flatMap { emojiIdsInGuild ->
+					val removeFromShardIndex = shardIndex.removeElements(*emojiIdsInGuild.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = emojiOps.remove(*allIds.toTypedArray())
+					val remove = emojiOps.remove(*emojiIdsInGuild.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)

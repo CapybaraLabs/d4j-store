@@ -8,7 +8,8 @@ interface EmojiRepository {
 	fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void>
 	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void>
 
-	fun deleteByGuildId(emojiIds: List<Long>, guildId: Long): Mono<Long>
+	fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long>
+	fun deleteByGuildId(guildId: Long): Mono<Long>
 	fun deleteByShardId(shardId: Int): Mono<Long>
 
 	fun countEmojis(): Mono<Long>

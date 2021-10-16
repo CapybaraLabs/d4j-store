@@ -65,19 +65,14 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		}
 	}
 
-	override fun deleteByGuildId(channelIds: List<Long>, guildId: Long): Mono<Long> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		// TODO consider LUA script for atomicity
 		return Mono.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
 				.flatMap { channelIdsInGuild ->
-					if (channelIds != channelIdsInGuild) {
-						log.warn("Guild index deviates from ids parameter: {} vs {}", channelIdsInGuild, channelIds)
-					}
-					val allChannelIds = channelIds + channelIdsInGuild
+					val removeChannels = channelOps.remove(*channelIdsInGuild.toTypedArray())
 
-					val removeChannels = channelOps.remove(*allChannelIds.toTypedArray())
-
-					val removeFromShardIndex = shardIndex.removeElements(*allChannelIds.toTypedArray())
+					val removeFromShardIndex = shardIndex.removeElements(*channelIdsInGuild.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 

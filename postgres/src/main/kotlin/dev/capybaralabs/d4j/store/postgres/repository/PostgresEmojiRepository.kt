@@ -69,11 +69,22 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 	}
 
-	override fun deleteByGuildId(emojiIds: List<Long>, guildId: Long): Mono<Long> {
+	override fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
 			withConnection(factory) {
-				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1)")
+				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1) AND guild_id = $2")
 					.bind("$1", emojiIds.toTypedArray())
+					.bind("$2", guildId)
+					.executeConsumingSingle().toLong()
+			}
+		}
+	}
+
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
+		return Mono.defer {
+			withConnection(factory) {
+				it.createStatement("DELETE FROM d4j_discord_emoji WHERE guild_id = $1")
+					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
 			}
 		}

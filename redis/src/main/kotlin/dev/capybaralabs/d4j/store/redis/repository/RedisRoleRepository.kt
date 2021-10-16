@@ -37,7 +37,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val save = roleOps.putAll(roles.associateBy { it.id().asLong() }).then()
+			val save = roleOps.putAll(roles.associateBy { it.id().asLong() })
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
@@ -54,21 +54,16 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 		}
 	}
 
-	override fun deleteByGuildId(roleIds: List<Long>, guildId: Long): Mono<Long> {
+	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		// TODO consider LUA script for atomicity
 		return Mono.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { idsInGuild ->
-					if (roleIds != idsInGuild) {
-						log.warn("Guild index deviates from ids parameter: {} vs {}", idsInGuild, roleIds)
-					}
-					val allIds = roleIds + idsInGuild
-
-					val removeFromShardIndex = shardIndex.removeElements(*allIds.toTypedArray())
+				.flatMap { roleIdsInGuild ->
+					val removeFromShardIndex = shardIndex.removeElements(*roleIdsInGuild.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = roleOps.remove(*allIds.toTypedArray())
+					val remove = roleOps.remove(*roleIdsInGuild.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)

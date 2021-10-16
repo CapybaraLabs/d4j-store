@@ -23,7 +23,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 	}
 
 	override fun save(voiceState: VoiceStateData, shardId: Int, guildId: Long): Mono<Void> {
-		return saveAll(listOf(voiceState), shardId, guildId).then()
+		return saveAll(listOf(voiceState), shardId, guildId)
 	}
 
 	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int, guildId: Long): Mono<Void> {
