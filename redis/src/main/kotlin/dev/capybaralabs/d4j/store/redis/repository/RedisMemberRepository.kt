@@ -4,6 +4,7 @@ import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.MemberRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.MemberData
+import org.springframework.data.redis.core.ScanOptions
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -18,6 +19,22 @@ internal class RedisMemberRepository(prefix: String, factory: RedisFactory) : Re
 
 	private fun memberId(guildId: Long, userId: Long): String {
 		return "$guildId:$userId"
+	}
+
+	private fun userPattern(userId: Long): String {
+		return "*:$userId"
+	}
+
+	private fun guildPattern(guildId: Long): String {
+		return "$guildId:$*"
+	}
+
+	private fun extractGuildId(memberId: String): Long {
+		return memberId.split(":")[0].toLong()
+	}
+
+	private fun extractUserId(memberId: String): Long {
+		return memberId.split(":")[1].toLong()
 	}
 
 	override fun save(guildId: Long, member: MemberData, shardId: Int): Mono<Void> {
@@ -120,6 +137,23 @@ internal class RedisMemberRepository(prefix: String, factory: RedisFactory) : Re
 	}
 
 	override fun getMembersByUserId(userId: Long): Flux<Pair<Long, MemberData>> {
-		TODO("Not yet implemented")
+		return Flux.defer {
+			val userScan = ScanOptions.scanOptions()
+				.match(userPattern(userId))
+				.count(1000) // sparse dataset, use a large batch size
+				.build()
+			memberOps.scan(userScan)
+				.map { Pair(extractGuildId(it.key), it.value) }
+		}
+	}
+
+	fun getUserIdsOnShard(shardId: Int): Flux<Long> {
+		return shardIndex.getElementsByGroup(shardId)
+			.map { extractUserId(it) }
+	}
+
+	fun getUserIdsOnOtherShards(shardId: Int): Flux<Long> {
+		return shardIndex.getElementsNotInGroup(shardId)
+			.map { extractUserId(it) }
 	}
 }

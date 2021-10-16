@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.redis
 
+import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.Repositories
 import dev.capybaralabs.d4j.store.redis.repository.RedisChannelRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisEmojiRepository
@@ -25,6 +26,13 @@ internal class RedisRepositories(
 ) : Repositories {
 
 	override fun deleteOrphanedUsers(shardId: Int): Mono<Long> {
-		TODO("Not yet implemented")
+
+		val fetchOnThisShard = members.getUserIdsOnShard(shardId).collectSet()
+		// TODO think about using collections inside of redis, pulling them out seems expensive
+		val fetchOnOtherShards = members.getUserIdsOnOtherShards(shardId).collectSet()
+
+		return Mono.zip(fetchOnThisShard, fetchOnOtherShards)
+			.map { it.t1 - it.t2 }
+			.flatMap { orphaned -> users.deleteByIds(orphaned) }
 	}
 }

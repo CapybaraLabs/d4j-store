@@ -308,9 +308,9 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val deleteMember = repos.members.deleteById(guildId, userId)
 		val deletePresence = repos.presences.deleteById(guildId, userId)
 
-		val deleteOrphanUser = repos.members.getMembersByUserId(userId) // TODO consider method that loads less data
+		val deleteOrphanUser = repos.members.getMembersByUserId(userId)
 			.filter { it.first != guildId }
-			.hasElements()
+			.hasElements() // short circuit keeps this a low impact call
 			.flatMap { hasMutualServers ->
 				if (hasMutualServers) Mono.empty()
 				else repos.users.deleteById(userId)

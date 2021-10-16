@@ -26,8 +26,12 @@ internal class RedisUserRepository(prefix: String, factory: RedisFactory) : Redi
 	}
 
 	override fun deleteById(userId: Long): Mono<Long> {
+		return deleteByIds(listOf(userId))
+	}
+
+	fun deleteByIds(userIds: Collection<Long>): Mono<Long> {
 		return Mono.defer {
-			userOps.remove(userId)
+			userOps.remove(*userIds.toTypedArray())
 		}
 	}
 

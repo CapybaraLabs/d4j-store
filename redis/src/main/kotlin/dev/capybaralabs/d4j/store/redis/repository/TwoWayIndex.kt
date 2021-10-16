@@ -46,6 +46,17 @@ class TwoWayIndex<V>(private val key: String, factory: RedisFactory, valueClass:
 		return zsetOps.rangeByScore(key, Range.just(groupId.toDouble()))
 	}
 
+	fun getElementsNotInGroup(groupId: Int): Flux<V> {
+		val exclusiveShardIndex = Range.Bound.exclusive(groupId.toDouble())
+		val leftUnbounded = Range.leftUnbounded(exclusiveShardIndex)
+		val rightUnbounded = Range.rightUnbounded(exclusiveShardIndex)
+
+		val left = zsetOps.rangeByScore(key, leftUnbounded)
+		val right = zsetOps.rangeByScore(key, rightUnbounded)
+
+		return left.concatWith(right)
+	}
+
 	fun deleteByGroupId(groupId: Int): Mono<Long> {
 		return zsetOps.removeRangeByScore(key, Range.just(groupId.toDouble()))
 	}

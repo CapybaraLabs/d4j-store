@@ -20,5 +20,5 @@ interface MemberRepository {
 	fun getMembers(): Flux<MemberData>
 	fun getExactMembersInGuild(guildId: Long): Flux<MemberData>
 	fun getMemberById(guildId: Long, userId: Long): Mono<MemberData>
-	fun getMembersByUserId(userId: Long): Flux<Pair<Long, MemberData>>
+	fun getMembersByUserId(userId: Long): Flux<Pair<Long, MemberData>>  // by guildId
 }
