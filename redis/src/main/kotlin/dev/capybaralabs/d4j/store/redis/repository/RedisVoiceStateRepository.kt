@@ -8,7 +8,7 @@ import discord4j.discordjson.json.VoiceStateData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
+internal class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
 
 	private val voiceStateKey = key("voicestate")
 	private val voiceStateOps = RedisHashOps(voiceStateKey, factory, String::class.java, VoiceStateData::class.java)

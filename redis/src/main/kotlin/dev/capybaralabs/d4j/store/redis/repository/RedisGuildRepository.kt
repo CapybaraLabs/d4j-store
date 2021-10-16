@@ -7,7 +7,7 @@ import discord4j.discordjson.json.GuildData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), GuildRepository {
+internal class RedisGuildRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), GuildRepository {
 
 	private val guildKey = key("guild")
 	private val guildOps = RedisHashOps(guildKey, factory, Long::class.java, GuildData::class.java)

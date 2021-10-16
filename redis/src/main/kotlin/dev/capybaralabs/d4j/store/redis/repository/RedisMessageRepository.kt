@@ -7,7 +7,7 @@ import discord4j.discordjson.json.MessageData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
+internal class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
 
 	private val messageKey = key("message")
 	private val messageOps = RedisHashOps(messageKey, factory, Long::class.java, MessageData::class.java)

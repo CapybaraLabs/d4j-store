@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), RoleRepository {
+internal class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), RoleRepository {
 
 	companion object {
 		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)

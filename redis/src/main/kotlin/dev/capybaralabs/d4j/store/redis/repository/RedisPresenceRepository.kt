@@ -7,7 +7,7 @@ import discord4j.discordjson.json.PresenceData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), PresenceRepository {
+internal class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), PresenceRepository {
 
 	private val presenceKey = key("presence")
 	private val presenceOps = RedisHashOps(presenceKey, factory, String::class.java, PresenceData::class.java)

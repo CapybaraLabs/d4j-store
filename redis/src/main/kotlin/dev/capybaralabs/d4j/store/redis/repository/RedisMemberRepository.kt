@@ -7,7 +7,7 @@ import discord4j.discordjson.json.MemberData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
+internal class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
 
 	private val memberKey = key("member")
 	private val memberOps = RedisHashOps(memberKey, factory, String::class.java, MemberData::class.java)
