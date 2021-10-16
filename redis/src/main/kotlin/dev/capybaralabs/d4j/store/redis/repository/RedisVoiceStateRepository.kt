@@ -11,7 +11,7 @@ import reactor.core.publisher.Mono
 class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), VoiceStateRepository {
 
 	private val voiceStateKey = key("voicestate")
-	private val voiceStateOps = factory.createRedisHashOperations<String, String, VoiceStateData>()
+	private val voiceStateOps = RedisHashOps(voiceStateKey, factory, String::class.java, VoiceStateData::class.java)
 
 	// a user can be in multiple channels (e.g. bots), so our indices have to handle that
 	// kinda dumb to have the guildId as part of the index values here BUT we need it because it is not unique
@@ -39,7 +39,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 			val addGuildToShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
 			val voiceStatesById = voiceStatesInChannels.associateBy { voiceStateId(guildId, it.userId().asLong()) }
-			val save = voiceStateOps.putAll(voiceStateKey, voiceStatesById)
+			val save = voiceStateOps.putAll(voiceStatesById)
 
 			Mono.`when`(addToGuildIndex, addGuildToShardIndex, save)
 		}
@@ -48,7 +48,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
 			val removeFromGuildIndex = guildIndex.removeElements(guildId, voiceStateId(guildId, userId))
-			val remove = voiceStateOps.remove(voiceStateKey, voiceStateId(guildId, userId))
+			val remove = voiceStateOps.remove(voiceStateId(guildId, userId))
 
 			Mono.`when`(removeFromGuildIndex)
 				.then(remove)
@@ -62,7 +62,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = voiceStateOps.remove(voiceStateKey, *voiceStateIds.toTypedArray())
+					val remove = voiceStateOps.remove(*voiceStateIds.toTypedArray())
 
 					Mono.`when`(deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)
@@ -83,13 +83,13 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 						Mono.`when`(removeGuildsFromShardIndex, deleteGuildsFromGuildIndex).then(Mono.just(voiceStateIds))
 					}
 				}
-				.flatMap { voiceStateIds -> voiceStateOps.remove(voiceStateKey, *voiceStateIds.toTypedArray()) }
+				.flatMap { voiceStateIds -> voiceStateOps.remove(*voiceStateIds.toTypedArray()) }
 		}
 	}
 
 	override fun countVoiceStates(): Mono<Long> {
 		return Mono.defer {
-			voiceStateOps.size(voiceStateKey)
+			voiceStateOps.size()
 		}
 	}
 
@@ -109,7 +109,7 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 
 	override fun getVoiceStates(): Flux<VoiceStateData> {
 		return Flux.defer {
-			voiceStateOps.values(voiceStateKey)
+			voiceStateOps.values()
 		}
 	}
 
@@ -125,14 +125,14 @@ class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) : RedisRe
 	override fun getVoiceStatesInGuild(guildId: Long): Flux<VoiceStateData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { voiceStateOps.multiGet(voiceStateKey, it) }
+				.flatMap { voiceStateOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}
 
 	override fun getVoiceStateById(guildId: Long, userId: Long): Mono<VoiceStateData> {
 		return Mono.defer {
-			voiceStateOps.get(voiceStateKey, voiceStateId(guildId, userId))
+			voiceStateOps.get(voiceStateId(guildId, userId))
 		}
 	}
 }

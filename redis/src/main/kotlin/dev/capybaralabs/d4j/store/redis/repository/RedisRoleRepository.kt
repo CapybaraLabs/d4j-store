@@ -16,7 +16,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 	}
 
 	private val roleKey = key("role")
-	private val roleOps = factory.createRedisHashOperations<String, Long, RoleData>()
+	private val roleOps = RedisHashOps(roleKey, factory, Long::class.java, RoleData::class.java)
 
 	private val shardIndex = twoWayIndex("$roleKey:shard-index", factory)
 	private val guildIndex = oneWayIndex("$roleKey:guild-index", factory)
@@ -37,7 +37,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val save = roleOps.putAll(roleKey, roles.associateBy { it.id().asLong() }).then()
+			val save = roleOps.putAll(roles.associateBy { it.id().asLong() }).then()
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
@@ -45,7 +45,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			val remove = roleOps.remove(roleKey, roleId)
+			val remove = roleOps.remove(roleId)
 			val removeFromShardIndex = shardIndex.removeElements(roleId)
 			val removeFromGuildIndex = guildIndex.removeElements(guildId, roleId)
 
@@ -68,7 +68,7 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = roleOps.remove(roleKey, *allIds.toTypedArray())
+					val remove = roleOps.remove(*allIds.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)
@@ -91,13 +91,13 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 					.flatMap { idsInGuilds -> getIds.map { ids -> idsInGuilds + ids } }
 			}
 
-			getAllIds.flatMap { roleOps.remove(roleKey, *it.toTypedArray()) }
+			getAllIds.flatMap { roleOps.remove(*it.toTypedArray()) }
 		}
 	}
 
 	override fun countRoles(): Mono<Long> {
 		return Mono.defer {
-			roleOps.size(roleKey)
+			roleOps.size()
 		}
 	}
 
@@ -109,21 +109,21 @@ class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisReposito
 
 	override fun getRoles(): Flux<RoleData> {
 		return Flux.defer {
-			roleOps.values(roleKey)
+			roleOps.values()
 		}
 	}
 
 	override fun getRolesInGuild(guildId: Long): Flux<RoleData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { roleOps.multiGet(roleKey, it) }
+				.flatMap { roleOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}
 
 	override fun getRoleById(roleId: Long): Mono<RoleData> {
 		return Mono.defer {
-			roleOps.get(roleKey, roleId)
+			roleOps.get(roleId)
 		}
 	}
 }

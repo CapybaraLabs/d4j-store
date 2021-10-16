@@ -29,10 +29,16 @@ class OneWayIndex<V>(private val keyPrefix: String, factory: RedisFactory, value
 	}
 
 	fun addElements(groupId: Long, vararg elements: V): Mono<Long> {
+		if (elements.isEmpty()) {
+			return Mono.empty()
+		}
 		return setOps.add(key(groupId), *elements)
 	}
 
 	fun removeElements(groupId: Long, vararg elements: V): Mono<Long> {
+		if (elements.isEmpty()) {
+			return Mono.empty()
+		}
 		return setOps.remove(key(groupId), *elements)
 	}
 
@@ -45,6 +51,9 @@ class OneWayIndex<V>(private val keyPrefix: String, factory: RedisFactory, value
 	}
 
 	fun getElementsInGroups(groupIds: Collection<Long>): Flux<V> {
+		if (groupIds.isEmpty()) {
+			return Flux.empty()
+		}
 		return setOps.union(groupIds.map { key(it) })
 	}
 
@@ -53,6 +62,9 @@ class OneWayIndex<V>(private val keyPrefix: String, factory: RedisFactory, value
 	}
 
 	fun deleteGroups(groupIds: Collection<Long>): Mono<Long> {
+		if (groupIds.isEmpty()) {
+			return Mono.empty()
+		}
 		return ops.delete(*groupIds.map { key(it) }.toTypedArray())
 	}
 }

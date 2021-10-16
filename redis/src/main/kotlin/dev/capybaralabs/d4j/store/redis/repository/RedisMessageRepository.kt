@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono
 class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MessageRepository {
 
 	private val messageKey = key("message")
-	private val messageOps = factory.createRedisHashOperations<String, Long, MessageData>()
+	private val messageOps = RedisHashOps(messageKey, factory, Long::class.java, MessageData::class.java)
 
 	private val shardIndex = twoWayIndex("$messageKey:shard-index", factory)
 	private val channelIndex = oneWayIndex("$messageKey:channel-index", factory)
@@ -25,7 +25,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 			val addToChannelIndex = channelIndex.addElements(channelId, messageId)
 			val addToChannelShardIndex = channelShardIndex.addElements(shardId, listOf(channelId))
 
-			val save = messageOps.put(messageKey, messageId, message)
+			val save = messageOps.put(messageId, message)
 
 			Mono.`when`(addToShardIndex, addToChannelIndex, addToChannelShardIndex, save)
 		}
@@ -40,7 +40,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 			val removeFromShardIndex = shardIndex.removeElements(*messageIds.toTypedArray())
 			val removeFromChannelIndex = channelIndex.removeElements(channelId, *messageIds.toTypedArray())
 
-			val remove = messageOps.remove(messageKey, *messageIds.toTypedArray())
+			val remove = messageOps.remove(*messageIds.toTypedArray())
 
 			Mono.`when`(removeFromShardIndex, removeFromChannelIndex)
 				.then(remove)
@@ -61,7 +61,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 					.flatMap { idsInChannels -> getIds.map { ids -> idsInChannels + ids } }
 			}
 
-			getAllIds.flatMap { messageOps.remove(messageKey, *it.toTypedArray()) }
+			getAllIds.flatMap { messageOps.remove(*it.toTypedArray()) }
 		}
 	}
 
@@ -77,7 +77,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 					val deleteChannelIndexEntries = channelIndex.deleteGroups(channelIds)
 					val removeChannelsFromShardIndex = channelShardIndex.removeElements(*channelIds.toTypedArray())
 
-					val remove = messageOps.remove(messageKey, *ids.toTypedArray())
+					val remove = messageOps.remove(*ids.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteChannelIndexEntries, removeChannelsFromShardIndex)
 						.then(remove)
@@ -87,7 +87,7 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 
 	override fun countMessages(): Mono<Long> {
 		return Mono.defer {
-			messageOps.size(messageKey)
+			messageOps.size()
 		}
 	}
 
@@ -99,27 +99,27 @@ class RedisMessageRepository(prefix: String, factory: RedisFactory) : RedisRepos
 
 	override fun getMessages(): Flux<MessageData> {
 		return Flux.defer {
-			messageOps.values(messageKey)
+			messageOps.values()
 		}
 	}
 
 	override fun getMessagesInChannel(channelId: Long): Flux<MessageData> {
 		return Flux.defer {
 			channelIndex.getElementsInGroup(channelId).collectList()
-				.flatMap { messageOps.multiGet(messageKey, it) }
+				.flatMap { messageOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}
 
 	override fun getMessageById(messageId: Long): Mono<MessageData> {
 		return Mono.defer {
-			messageOps.get(messageKey, messageId)
+			messageOps.get(messageId)
 		}
 	}
 
 	override fun getMessagesByIds(messageIds: List<Long>): Flux<MessageData> {
 		return Flux.defer {
-			messageOps.multiGet(messageKey, messageIds)
+			messageOps.multiGet(messageIds)
 				.flatMapIterable { it }
 		}
 	}

@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono
 class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), MemberRepository {
 
 	private val memberKey = key("member")
-	private val memberOps = factory.createRedisHashOperations<String, String, MemberData>()
+	private val memberOps = RedisHashOps(memberKey, factory, String::class.java, MemberData::class.java)
 
 	private val shardIndex = twoWayIndex("$memberKey:shard-index", factory, String::class.java)
 	private val guildIndex = oneWayIndex("$memberKey:guild-index", factory)
@@ -36,7 +36,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 			val addToGuildIndex = guildIndex.addElements(guildId, *userIds.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val save = memberOps.putAll(memberKey, memberMap)
+			val save = memberOps.putAll(memberMap)
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
@@ -49,7 +49,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 			val removeFromShardIndex = shardIndex.removeElements(memberId)
 			val removeFromGuildIndex = guildIndex.removeElements(guildId, userId)
 
-			val remove = memberOps.remove(memberKey, memberId)
+			val remove = memberOps.remove(memberId)
 
 			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
 				.then(remove)
@@ -65,7 +65,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = memberOps.remove(memberKey, *memberIds.toTypedArray())
+					val remove = memberOps.remove(*memberIds.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)
@@ -81,7 +81,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 			val delete = shardIndex.getElementsByGroup(shardId).collectSet()
 				.flatMap { shardIndex.deleteByGroupId(shardId).then(Mono.just(it)) }
-				.flatMap { memberOps.remove(memberKey, *it.toTypedArray()) }
+				.flatMap { memberOps.remove(*it.toTypedArray()) }
 
 			removeFromGuildIndices.then(delete)
 		}
@@ -89,7 +89,7 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	override fun countMembers(): Mono<Long> {
 		return Mono.defer {
-			memberOps.size(memberKey)
+			memberOps.size()
 		}
 	}
 
@@ -101,22 +101,21 @@ class RedisMemberRepository(prefix: String, factory: RedisFactory) : RedisReposi
 
 	override fun getMembers(): Flux<MemberData> {
 		return Flux.defer {
-			memberOps.values(memberKey)
+			memberOps.values()
 		}
 	}
 
 	override fun getExactMembersInGuild(guildId: Long): Flux<MemberData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { memberOps.multiGet(memberKey, it.map { userId -> memberId(guildId, userId) }) }
+				.flatMap { memberOps.multiGet(it.map { userId -> memberId(guildId, userId) }) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
-
 	}
 
 	override fun getMemberById(guildId: Long, userId: Long): Mono<MemberData> {
 		return Mono.defer {
-			memberOps.get(memberKey, memberId(guildId, userId))
+			memberOps.get(memberId(guildId, userId))
 		}
 	}
 

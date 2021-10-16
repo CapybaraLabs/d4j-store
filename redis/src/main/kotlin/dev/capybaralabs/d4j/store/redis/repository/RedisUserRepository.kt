@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono
 class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), UserRepository {
 
 	private val userKey = key("user")
-	private val userOps = factory.createRedisHashOperations<String, Long, UserData>()
+	private val userOps = RedisHashOps(userKey, factory, Long::class.java, UserData::class.java)
 
 	override fun save(user: UserData): Mono<Void> {
 		return saveAll(listOf(user))
@@ -21,31 +21,31 @@ class RedisUserRepository(prefix: String, factory: RedisFactory) : RedisReposito
 		}
 
 		return Mono.defer {
-			userOps.putAll(userKey, users.associateBy { it.id().asLong() }).then()
+			userOps.putAll(users.associateBy { it.id().asLong() }).then()
 		}
 	}
 
 	override fun deleteById(userId: Long): Mono<Long> {
 		return Mono.defer {
-			userOps.remove(userKey, userId)
+			userOps.remove(userId)
 		}
 	}
 
 	override fun countUsers(): Mono<Long> {
 		return Mono.defer {
-			userOps.size(userKey)
+			userOps.size()
 		}
 	}
 
 	override fun getUsers(): Flux<UserData> {
 		return Flux.defer {
-			userOps.values(userKey)
+			userOps.values()
 		}
 	}
 
 	override fun getUserById(userId: Long): Mono<UserData> {
 		return Mono.defer {
-			userOps.get(userKey, userId)
+			userOps.get(userId)
 		}
 	}
 }

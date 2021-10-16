@@ -17,7 +17,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	}
 
 	private val channelKey = key("channel")
-	private val channelOps = factory.createRedisHashOperations<String, Long, ChannelData>()
+	private val channelOps = RedisHashOps(channelKey, factory, Long::class.java, ChannelData::class.java)
 
 	private val shardIndex = twoWayIndex("$channelKey:shard-index", factory)
 	private val guildIndex = oneWayIndex("$channelKey:guild-index", factory)
@@ -46,7 +46,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 			val guilIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
 
-			val saveChannels = channelOps.putAll(channelKey, channels.associateBy { it.id().asLong() })
+			val saveChannels = channelOps.putAll(channels.associateBy { it.id().asLong() })
 
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, saveChannels)
@@ -56,7 +56,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 
 	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
-			val removeChannel = channelOps.remove(channelKey, channelId)
+			val removeChannel = channelOps.remove(channelId)
 			val removeFromShardIndex = shardIndex.removeElements(channelId)
 			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, channelId) else Mono.empty()
 
@@ -75,7 +75,7 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 					}
 					val allChannelIds = channelIds + channelIdsInGuild
 
-					val removeChannels = channelOps.remove(channelKey, *allChannelIds.toTypedArray())
+					val removeChannels = channelOps.remove(*allChannelIds.toTypedArray())
 
 					val removeFromShardIndex = shardIndex.removeElements(*allChannelIds.toTypedArray())
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
@@ -102,14 +102,14 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 					.flatMap { idsInGuilds -> getChannelIds.map { channelIds -> idsInGuilds + channelIds } }
 			}
 
-			getAllChannelIds.flatMap { channelOps.remove(channelKey, *it.toTypedArray()) }
+			getAllChannelIds.flatMap { channelOps.remove(*it.toTypedArray()) }
 		}
 	}
 
 
 	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
-			channelOps.size(channelKey)
+			channelOps.size()
 		}
 	}
 
@@ -122,20 +122,20 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
-			channelOps.get(channelKey, channelId)
+			channelOps.get(channelId)
 		}
 	}
 
 	override fun getChannels(): Flux<ChannelData> {
 		return Flux.defer {
-			channelOps.values(channelKey)
+			channelOps.values()
 		}
 	}
 
 	override fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { channelOps.multiGet(channelKey, it) }
+				.flatMap { channelOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}

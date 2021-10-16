@@ -16,7 +16,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 	}
 
 	private val emojiKey = key("emoji")
-	private val emojiOps = factory.createRedisHashOperations<String, Long, EmojiData>()
+	private val emojiOps = RedisHashOps(emojiKey, factory, Long::class.java, EmojiData::class.java)
 
 	private val shardIndex = twoWayIndex("$emojiKey:shard-index", factory)
 	private val guildIndex = oneWayIndex("$emojiKey:guild-index", factory)
@@ -38,7 +38,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
 			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val save = emojiOps.putAll(emojiKey, guildEmojis.associateBy { it.id().orElseThrow().asLong() }).then()
+			val save = emojiOps.putAll(guildEmojis.associateBy { it.id().orElseThrow().asLong() }).then()
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}
@@ -58,7 +58,7 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = emojiOps.remove(emojiKey, *allIds.toTypedArray())
+					val remove = emojiOps.remove(*allIds.toTypedArray())
 
 					Mono.`when`(removeFromShardIndex, deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)
@@ -81,13 +81,13 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 					.flatMap { idsInGuilds -> getIds.map { ids -> idsInGuilds + ids } }
 			}
 
-			getAllIds.flatMap { emojiOps.remove(emojiKey, *it.toTypedArray()) }
+			getAllIds.flatMap { emojiOps.remove(*it.toTypedArray()) }
 		}
 	}
 
 	override fun countEmojis(): Mono<Long> {
 		return Mono.defer {
-			emojiOps.size(emojiKey)
+			emojiOps.size()
 		}
 	}
 
@@ -99,21 +99,21 @@ class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisReposit
 
 	override fun getEmojis(): Flux<EmojiData> {
 		return Flux.defer {
-			emojiOps.values(emojiKey)
+			emojiOps.values()
 		}
 	}
 
 	override fun getEmojisInGuild(guildId: Long): Flux<EmojiData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { emojiOps.multiGet(emojiKey, it) }
+				.flatMap { emojiOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}
 
 	override fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData> {
 		return Mono.defer {
-			emojiOps.get(emojiKey, emojiId)
+			emojiOps.get(emojiId)
 		}
 	}
 }

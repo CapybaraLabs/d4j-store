@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono
 class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), PresenceRepository {
 
 	private val presenceKey = key("presence")
-	private val presenceOps = factory.createRedisHashOperations<String, String, PresenceData>()
+	private val presenceOps = RedisHashOps(presenceKey, factory, String::class.java, PresenceData::class.java)
 
 	// a user can have "multiple" presences (due to sharding), so our indices have to handle that
 	// kinda dumb to have the guildId as part of the index values here BUT we need it because it is not unique
@@ -36,7 +36,7 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 			val addGuildToShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
 			val presencesById = presences.associateBy { presenceId(guildId, it.user().id().asLong()) }
-			val save = presenceOps.putAll(presenceKey, presencesById)
+			val save = presenceOps.putAll(presencesById)
 
 			Mono.`when`(addToGuildIndex, addGuildToShardIndex, save)
 		}
@@ -45,7 +45,7 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
 			val removeFromGuildIndex = guildIndex.removeElements(guildId, presenceId(guildId, userId))
-			val remove = presenceOps.remove(presenceKey, presenceId(guildId, userId))
+			val remove = presenceOps.remove(presenceId(guildId, userId))
 
 			Mono.`when`(removeFromGuildIndex)
 				.then(remove)
@@ -59,7 +59,7 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 					val deleteGuildIndexEntry = guildIndex.deleteGroup(guildId)
 					val removeGuildFromShardIndex = gShardIndex.removeElements(guildId)
 
-					val remove = presenceOps.remove(presenceKey, *presenceIds.toTypedArray())
+					val remove = presenceOps.remove(*presenceIds.toTypedArray())
 
 					Mono.`when`(deleteGuildIndexEntry, removeGuildFromShardIndex)
 						.then(remove)
@@ -80,14 +80,14 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 						Mono.`when`(removeGuildsFromShardIndex, deleteGuildsFromGuildIndex).then(Mono.just(presenceIds))
 					}
 				}
-				.flatMap { presenceIds -> presenceOps.remove(presenceKey, *presenceIds.toTypedArray()) }
+				.flatMap { presenceIds -> presenceOps.remove(*presenceIds.toTypedArray()) }
 		}
 
 	}
 
 	override fun countPresences(): Mono<Long> {
 		return Mono.defer {
-			presenceOps.size(presenceKey)
+			presenceOps.size()
 		}
 	}
 
@@ -99,21 +99,21 @@ class RedisPresenceRepository(prefix: String, factory: RedisFactory) : RedisRepo
 
 	override fun getPresences(): Flux<PresenceData> {
 		return Flux.defer {
-			presenceOps.values(presenceKey)
+			presenceOps.values()
 		}
 	}
 
 	override fun getPresencesInGuild(guildId: Long): Flux<PresenceData> {
 		return Flux.defer {
 			guildIndex.getElementsInGroup(guildId).collectList()
-				.flatMap { presenceOps.multiGet(presenceKey, it) }
+				.flatMap { presenceOps.multiGet(it) }
 				.flatMapMany { Flux.fromIterable(it) }
 		}
 	}
 
 	override fun getPresenceById(guildId: Long, userId: Long): Mono<PresenceData> {
 		return Mono.defer {
-			presenceOps.get(presenceKey, presenceId(guildId, userId))
+			presenceOps.get(presenceId(guildId, userId))
 		}
 	}
 }

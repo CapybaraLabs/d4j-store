@@ -35,7 +35,10 @@ class TwoWayIndex<V>(private val key: String, factory: RedisFactory, valueClass:
 		return zsetOps.addAll(key, tuples)
 	}
 
-	internal fun removeElements(vararg elements: V): Mono<Long> {
+	fun removeElements(vararg elements: V): Mono<Long> {
+		if (elements.isEmpty()) {
+			return Mono.empty()
+		}
 		return zsetOps.remove(key, *elements)
 	}
 
