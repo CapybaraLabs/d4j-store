@@ -9,22 +9,20 @@ import org.springframework.data.redis.core.ReactiveSetOperations
 import org.springframework.data.redis.core.ReactiveZSetOperations
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializationContext
+import org.springframework.data.redis.serializer.RedisSerializer
 import org.springframework.data.redis.serializer.StringRedisSerializer
 
-class RedisFactory(val connectionFactory: ReactiveRedisConnectionFactory, val objectMapper: ObjectMapper) {
+class RedisFactory(private val connectionFactory: ReactiveRedisConnectionFactory, private val objectMapper: ObjectMapper) {
 
 	inline fun <reified K, reified V> createRedisOperations(): ReactiveRedisOperations<K, V> {
 		return createRedisOperations(K::class.java, V::class.java)
 	}
 
 	fun <K, V> createRedisOperations(kClass: Class<K>, vClass: Class<V>): ReactiveRedisOperations<K, V> {
-		val keySerializer = Jackson2JsonRedisSerializer(kClass)
-		val valueSerializer = Jackson2JsonRedisSerializer(vClass)
-		valueSerializer.setObjectMapper(objectMapper)
 		val builder = RedisSerializationContext.newSerializationContext<K, V>(StringRedisSerializer())
 		val context = builder
-			.key(keySerializer)
-			.value(valueSerializer)
+			.key(serializer(kClass))
+			.value(serializer(vClass))
 			.build()
 		return ReactiveRedisTemplate(connectionFactory, context)
 	}
@@ -34,15 +32,10 @@ class RedisFactory(val connectionFactory: ReactiveRedisConnectionFactory, val ob
 	}
 
 	fun <K, HK, HV> createRedisHashOperations(kClass: Class<K>, hkClass: Class<HK>, hvClass: Class<HV>): ReactiveHashOperations<K, HK, HV> {
-		val keySerializer = Jackson2JsonRedisSerializer(kClass)
-		val hashKeySerializer = Jackson2JsonRedisSerializer(hkClass)
-		val hashValueSerializer = Jackson2JsonRedisSerializer(hvClass)
-		hashValueSerializer.setObjectMapper(objectMapper)
-
 		val context = RedisSerializationContext.newSerializationContext<K, HV>(StringRedisSerializer())
-			.key(keySerializer)
-			.hashKey(hashKeySerializer)
-			.hashValue(hashValueSerializer)
+			.key(serializer(kClass))
+			.hashKey(serializer(hkClass))
+			.hashValue(serializer(hvClass))
 			.build()
 		return ReactiveRedisTemplate(connectionFactory, context).opsForHash()
 	}
@@ -52,13 +45,9 @@ class RedisFactory(val connectionFactory: ReactiveRedisConnectionFactory, val ob
 	}
 
 	fun <K, V> createRedisZSetOperations(kClass: Class<K>, vClass: Class<V>): ReactiveZSetOperations<K, V> {
-		val keySerializer = Jackson2JsonRedisSerializer(kClass)
-		val valueSerializer = Jackson2JsonRedisSerializer(vClass)
-		valueSerializer.setObjectMapper(objectMapper)
-
 		val context = RedisSerializationContext.newSerializationContext<K, V>(StringRedisSerializer())
-			.key(keySerializer)
-			.value(valueSerializer)
+			.key(serializer(kClass))
+			.value(serializer(vClass))
 			.build()
 
 		return ReactiveRedisTemplate(connectionFactory, context).opsForZSet()
@@ -69,16 +58,22 @@ class RedisFactory(val connectionFactory: ReactiveRedisConnectionFactory, val ob
 	}
 
 	fun <K, V> createRedisSetOperations(kClass: Class<K>, vClass: Class<V>): ReactiveSetOperations<K, V> {
-		val keySerializer = Jackson2JsonRedisSerializer(kClass)
-		val valueSerializer = Jackson2JsonRedisSerializer(vClass)
-		valueSerializer.setObjectMapper(objectMapper)
-
 		val context = RedisSerializationContext.newSerializationContext<K, V>(StringRedisSerializer())
-			.key(keySerializer)
-			.value(valueSerializer)
+			.key(serializer(kClass))
+			.value(serializer(vClass))
 			.build()
 
 		return ReactiveRedisTemplate(connectionFactory, context).opsForSet()
+	}
+
+	private fun <T> serializer(clazz: Class<T>): RedisSerializer<T> {
+		return if (clazz == String::class.java) {
+			StringRedisSerializer() as RedisSerializer<T>
+		} else {
+			val serializer = Jackson2JsonRedisSerializer(clazz)
+			serializer.setObjectMapper(objectMapper)
+			serializer
+		}
 	}
 
 }
