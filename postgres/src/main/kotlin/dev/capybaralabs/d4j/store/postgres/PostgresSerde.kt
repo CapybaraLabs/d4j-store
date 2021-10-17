@@ -8,6 +8,7 @@ internal interface PostgresSerde {
 
 	fun <I> serializeToString(value: I): String {
 		return String(serialize(value), StandardCharsets.UTF_8)
+			.replace("\\u0000", "\\uFFFD")
 	}
 
 	fun <I> deserialize(out: ByteArray, clazz: Class<I>): I

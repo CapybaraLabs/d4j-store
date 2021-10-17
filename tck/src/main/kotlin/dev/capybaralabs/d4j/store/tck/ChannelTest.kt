@@ -156,4 +156,30 @@ internal class ChannelTest(storeLayout: StoreLayout) {
 		assertThat(deltaChannel.name().isAbsent).isFalse
 		assertThat(deltaChannel.name().get()).isEqualTo("Delta Quadrant")
 	}
+
+
+	@Test
+	fun handleNullByte() {
+		val channelId = generateUniqueSnowflakeId()
+
+		val channelCreate = ChannelCreate.builder()
+			.channel(
+				channel(channelId)
+					.name("everybody gangsta until \u0000")
+					.build()
+			)
+		updater.onChannelCreate(0, channelCreate.build()).block()
+
+		val channel = accessor.getChannelById(channelId).block()!!
+		assertThat(channel.id().asLong()).isEqualTo(channelId)
+		assertThat(channel.name().isAbsent).isFalse
+		assertThat(channel.name().get()).isIn(
+			"everybody gangsta until \u0000", // Correct representation
+			"everybody gangsta until \uFFFD", // Unicode replacement character
+		)
+		assertThat(channel.guildId().isAbsent).isTrue
+
+		assertThat(accessor.channels.collectList().block())
+			.anyMatch { it.id().asLong() == channelId }
+	}
 }
