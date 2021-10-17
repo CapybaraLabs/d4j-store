@@ -1,11 +1,12 @@
 # D4J Stores [![Release](https://jitpack.io/v/dev.capybaralabs/d4j-store.svg?style=flat-square)](https://jitpack.io/#dev.capybaralabs/d4j-store) [![Coverage](https://img.shields.io/sonar/coverage/dev.capybaralabs.d4j.store.postgres:d4j-postgres-store?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/summary/overall?id=dev.capybaralabs.d4j.store.postgres%3Ad4j-postgres-store)
 
+Implementations of
+the [Discord4J Store](https://github.com/Discord4J/Discord4J/tree/master/common/src/main/java/discord4j/common/store/api/layout)
+(Discord entity cache) including an extensive test suite.
+
 ## Postgres
 
-An implementation of
-the [Discord4J Store](https://github.com/Discord4J/Discord4J/tree/master/common/src/main/java/discord4j/common/store/api/layout)
-(Discord entity cache)
-backed by everyone's favorite open sauce database [PostgreSQL](https://www.postgresql.org/).
+An implementation backed by everyone's favorite open sauce database [PostgreSQL](https://www.postgresql.org/).
 
 ### Gradle
 
@@ -15,7 +16,7 @@ repositories {
 }
 
 dependencies {
-	implementation 'dev.capybaralabs.d4j-store:postgres:x.y.z'
+	implementation "dev.capybaralabs.d4j-store:postgres:x.y.z"
 }
  ```
 
@@ -23,45 +24,94 @@ dependencies {
 
 ```kotlin
 fun connectionFactory(): ConnectionFactory {
-    return ConnectionFactories.get(
-        ConnectionFactoryOptions.builder()
-            .option(ConnectionFactoryOptions.DRIVER, "postgresql")
-            .option(ConnectionFactoryOptions.HOST, "127.0.0.1")
-            .option(ConnectionFactoryOptions.PORT, 5432)
-            .option(ConnectionFactoryOptions.USER, "cache")
-            .option(ConnectionFactoryOptions.PASSWORD, "cache")
-            .option(ConnectionFactoryOptions.DATABASE, "cache")
-            .build()
-    )
+	return ConnectionFactories.get(
+		ConnectionFactoryOptions.builder()
+			.option(ConnectionFactoryOptions.DRIVER, "postgresql")
+			.option(ConnectionFactoryOptions.HOST, "127.0.0.1")
+			.option(ConnectionFactoryOptions.PORT, 5432)
+			.option(ConnectionFactoryOptions.USER, "cache")
+			.option(ConnectionFactoryOptions.PASSWORD, "cache")
+			.option(ConnectionFactoryOptions.DATABASE, "cache")
+			.build()
+	)
 }
 
 fun connectionPool(): ConnectionPool {
-    val configuration = ConnectionPoolConfiguration.builder(connectionFactory())
-        .maxIdleTime(Duration.ofMillis(1000))
-        .maxSize(20)
-        .maxAcquireTime(Duration.ofSeconds(5))
-        .build()
+	val configuration = ConnectionPoolConfiguration.builder(connectionFactory())
+		.maxIdleTime(Duration.ofMillis(1000))
+		.maxSize(20)
+		.maxAcquireTime(Duration.ofSeconds(5))
+		.build()
 
-    return ConnectionPool(configuration)
+	return ConnectionPool(configuration)
 }
 
 fun postgresStoreLayout(): StoreLayout {
-    return PostgresStoreLayout(connectionPool())
+	return PostgresStoreLayout(connectionPool())
 }
 
 fun store(): Store {
-    return Store.fromLayout(postgresStoreLayout())
+	return Store.fromLayout(postgresStoreLayout())
 }
 
 fun gatewayBootstrap(discordClient: DiscordClient): GatewayBootstrap<GatewayOptions> {
-    return discordClient
-        .gateway()
-        .setStore(store())
-        .withEventDispatcher { ed ->
-            ed.on(Event::class.java)
-                .doOnNext { logger().trace("Event received ${it.javaClass.simpleName}") }
-                .retry()
-        }
+	return discordClient
+		.gateway()
+		.setStore(store())
+		.withEventDispatcher { ed ->
+			ed.on(Event::class.java)
+				.doOnNext { logger().trace("Event received ${it.javaClass.simpleName}") }
+				.retry()
+		}
+}
+```
+
+## Redis
+
+An implementation backed by everyone's second favorite open sauce database [Redis](https://redis.io/).
+
+### Gradle
+
+```groovy
+repositories {
+	maven { url "https://jitpack.io" }
+}
+
+dependencies {
+	implementation "dev.capybaralabs.d4j-store:redis:x.y.z"
+}
+ ```
+
+### Example Usage
+
+```kotlin
+
+fun connectionFactory(): ReactiveRedisConnectionFactory {
+	val redisUri = RedisURI.create("redis://localhost:6379/0")
+	val redisConfiguration = LettuceConnectionFactory.createRedisConfiguration(redisUri)
+	val connectionFactory = LettuceConnectionFactory(redisConfiguration)
+	connectionFactory.afterPropertiesSet()
+
+	return connectionFactory
+}
+
+fun redisStoreLayout(): StoreLayout {
+	return RedisStoreLayout(connectionFactory)
+}
+
+fun store(): Store {
+	return Store.fromLayout(redisStoreLayout())
+}
+
+fun gatewayBootstrap(discordClient: DiscordClient): GatewayBootstrap<GatewayOptions> {
+	return discordClient
+		.gateway()
+		.setStore(store())
+		.withEventDispatcher { ed ->
+			ed.on(Event::class.java)
+				.doOnNext { logger().trace("Event received ${it.javaClass.simpleName}") }
+				.retry()
+		}
 }
 ```
 
