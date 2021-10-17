@@ -18,8 +18,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
-	RoleRepository {
+internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) : RoleRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -38,11 +37,12 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 	}
 
 	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardId).then()
+		return saveAll(mapOf(Pair(guildId, listOf(role))), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
-		if (roles.isEmpty()) {
+	override fun saveAll(rolesByGuild: Map<Long, List<RoleData>>, shardId: Int): Mono<Void> {
+		val filtered = rolesByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
@@ -55,13 +55,16 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 					""".trimIndent()
 				)
 
-				for (role in roles) {
-					statement
-						.bind("$1", role.id().asLong())
-						.bind("$2", guildId)
-						.bind("$3", serde.serializeToString(role))
-						.bind("$4", shardId)
-						.add()
+				for (guildRoles in filtered) {
+					val guildId = guildRoles.key
+					for (role in guildRoles.value) {
+						statement
+							.bind("$1", role.id().asLong())
+							.bind("$2", guildId)
+							.bind("$3", serde.serializeToString(role))
+							.bind("$4", shardId)
+							.add()
+					}
 				}
 				statement.executeConsumingAll().then()
 			}

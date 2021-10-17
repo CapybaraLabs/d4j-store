@@ -37,18 +37,29 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 	}
 
 	override fun save(guild: GuildData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(guild), shardId).then()
+	}
+
+	override fun saveAll(guilds: List<GuildData>, shardId: Int): Mono<Void> {
+		if (guilds.isEmpty()) {
+			return Mono.empty()
+		}
 		return Mono.defer {
-			withConnection(factory) {
-				it.createStatement(
+			withConnection(factory) { connection ->
+				val statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_guild VALUES ($1, $2::jsonb, $3)
 						ON CONFLICT (guild_id) DO UPDATE SET data = $2::jsonb, shard_index = $3
 					""".trimIndent()
 				)
-					.bind("$1", guild.id().asLong())
-					.bind("$2", serde.serializeToString(guild))
-					.bind("$3", shardId)
-					.executeConsumingSingle().then()
+
+				for (guild in guilds) {
+					statement.bind("$1", guild.id().asLong())
+						.bind("$2", serde.serializeToString(guild))
+						.bind("$3", shardId)
+						.add()
+				}
+				statement.executeConsumingAll().then()
 			}
 		}
 	}

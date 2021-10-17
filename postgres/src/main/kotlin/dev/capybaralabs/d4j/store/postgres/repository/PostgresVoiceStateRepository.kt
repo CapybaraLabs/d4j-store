@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
+import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
 import dev.capybaralabs.d4j.store.common.toLong
 import dev.capybaralabs.d4j.store.postgres.PostgresSerde
@@ -38,16 +39,12 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}.blockLast()
 	}
 
-	override fun save(voiceState: VoiceStateData, shardId: Int, guildId: Long): Mono<Void> {
-		return saveAll(listOf(voiceState), shardId, guildId).then()
+	override fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(voiceState), shardId).then()
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int, guildId: Long): Mono<Void> {
-		if (voiceStates.isEmpty()) {
-			return Mono.empty()
-		}
-
-		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent }
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void> {
+		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent && it.guildId().isPresent() }
 		if (voiceStatesInChannels.isEmpty()) {
 			return Mono.empty()
 		}
@@ -64,8 +61,8 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 				for (voiceState in voiceStatesInChannels) {
 					statement
 						.bind("$1", voiceState.userId().asLong())
-						.bind("$2", voiceState.channelId().get().asLong())
-						.bind("$3", voiceState.guildId().get().asLong()) // TODO check if present or pass as param
+						.bind("$2", voiceState.channelId().orElseThrow().asLong())
+						.bind("$3", voiceState.guildId().get().asLong())
 						.bind("$4", serde.serializeToString(voiceState))
 						.bind("$5", shardId)
 						.add()

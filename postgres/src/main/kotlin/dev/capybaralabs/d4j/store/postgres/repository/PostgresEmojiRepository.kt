@@ -38,12 +38,14 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 	}
 
 	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardId).then()
+		return saveAll(mapOf(Pair(guildId, listOf(emoji))), shardId)
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void> {
-		val guildEmojis = emojis.filter { it.id().isPresent }
-		if (guildEmojis.isEmpty()) {
+	override fun saveAll(emojisByGuild: Map<Long, List<EmojiData>>, shardId: Int): Mono<Void> {
+		val filtered = emojisByGuild.entries
+			.map { Pair(it.key, it.value.filter { emojiData -> emojiData.id().isPresent }) }
+			.filter { it.second.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
@@ -56,13 +58,16 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 					""".trimIndent()
 				)
 
-				for (guildEmoji in guildEmojis) {
-					statement
-						.bind("$1", guildEmoji.id().get().asLong())
-						.bind("$2", guildId)
-						.bind("$3", serde.serializeToString(guildEmoji))
-						.bind("$4", shardId)
-						.add()
+				for (guildEmojis in filtered) {
+					val guildId = guildEmojis.first
+					for (emoji in guildEmojis.second) {
+						statement
+							.bind("$1", emoji.id().orElseThrow().asLong())
+							.bind("$2", guildId)
+							.bind("$3", serde.serializeToString(emoji))
+							.bind("$4", shardId)
+							.add()
+					}
 				}
 				statement.executeConsumingAll().then()
 			}

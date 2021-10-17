@@ -39,12 +39,13 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 	}
 
 	override fun save(guildId: Long, member: MemberData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(member), shardId).then()
+		return saveAll(mapOf(Pair(guildId, listOf(member))), shardId)
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, members: List<MemberData>, shardId: Int): Mono<Void> {
-		if (members.isEmpty()) {
+	override fun saveAll(membersByGuild: Map<Long, List<MemberData>>, shardId: Int): Mono<Void> {
+		val filtered = membersByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
@@ -57,13 +58,16 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 					""".trimIndent()
 				)
 
-				for (member in members) {
-					statement
-						.bind("$1", member.user().id().asLong())
-						.bind("$2", guildId)
-						.bind("$3", serde.serializeToString(member))
-						.bind("$4", shardId)
-						.add()
+				for (guildMembers in filtered.entries) {
+					val guildId = guildMembers.key
+					for (member in guildMembers.value) {
+						statement
+							.bind("$1", member.user().id().asLong())
+							.bind("$2", guildId)
+							.bind("$3", serde.serializeToString(member))
+							.bind("$4", shardId)
+							.add()
+					}
 				}
 
 				statement.executeConsumingAll().then()

@@ -6,7 +6,7 @@ import reactor.core.publisher.Mono
 
 interface EmojiRepository {
 	fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void>
-	fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void>
+	fun saveAll(emojisByGuild: Map<Long, List<EmojiData>>, shardId: Int): Mono<Void>
 
 	fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long>
 	fun deleteByGuildId(guildId: Long): Mono<Long>

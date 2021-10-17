@@ -23,21 +23,26 @@ internal class RedisRoleRepository(prefix: String, factory: RedisFactory) : Redi
 	private val gShardIndex = twoWayIndex("$roleKey:guild-shard-index", factory)
 
 	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardId)
+		return saveAll(mapOf(Pair(guildId, listOf(role))), shardId)
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
-		if (roles.isEmpty()) {
+	override fun saveAll(rolesByGuild: Map<Long, List<RoleData>>, shardId: Int): Mono<Void> {
+		val filtered = rolesByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
-		val ids = roles.map { it.id().asLong() }
+		val ids = filtered.flatMap { it.value }.map { it.id().asLong() }
+		val roleMap = filtered.flatMap { it.value }.associateBy { it.id().asLong() }
 		return Mono.defer {
 			val addToShardIndex = shardIndex.addElements(shardId, ids)
-			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
+			val addToGuildIndex = Flux.fromIterable(
+				filtered
+					.map { guildIndex.addElements(it.key, *it.value.map { role -> role.id().asLong() }.toTypedArray()) }
+			).flatMap { it }
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, filtered.keys)
 
-			val save = roleOps.putAll(roles.associateBy { it.id().asLong() })
+			val save = roleOps.putAll(roleMap)
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}

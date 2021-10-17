@@ -18,8 +18,7 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the presence table
  */
-internal class PostgresPresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
-	PresenceRepository {
+internal class PostgresPresenceRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) : PresenceRepository {
 
 	init {
 		withConnectionMany(factory) {
@@ -38,12 +37,13 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 	}
 
 	override fun save(guildId: Long, presence: PresenceData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(presence), shardId).then()
+		return saveAll(mapOf(Pair(guildId, listOf(presence))), shardId).then()
 	}
 
 	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void> {
-		if (presences.isEmpty()) {
+	override fun saveAll(presencesByGuild: Map<Long, List<PresenceData>>, shardId: Int): Mono<Void> {
+		val filtered = presencesByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
@@ -55,15 +55,17 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
 					""".trimIndent()
 				)
-				for (presence in presences) {
-					statement
-						.bind("$1", presence.user().id().asLong())
-						.bind("$2", guildId)
-						.bind("$3", serde.serializeToString(presence))
-						.bind("$4", shardId)
-						.add()
+				for (guildPresences in filtered) {
+					val guildId = guildPresences.key
+					for (presence in guildPresences.value) {
+						statement
+							.bind("$1", presence.user().id().asLong())
+							.bind("$2", guildId)
+							.bind("$3", serde.serializeToString(presence))
+							.bind("$4", shardId)
+							.add()
+					}
 				}
-
 				statement.executeConsumingAll().then()
 			}
 		}
