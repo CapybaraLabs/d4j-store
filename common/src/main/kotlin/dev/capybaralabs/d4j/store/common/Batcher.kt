@@ -8,7 +8,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
+import reactor.core.scheduler.Schedulers
 import reactor.util.function.Tuple2
+
+private val batchScheduler = Schedulers.newSingle("batchers")
 
 class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2<T, Sinks.Empty<Void>>>) -> Unit) {
 
@@ -23,6 +26,7 @@ class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2
 
 	init {
 		Flux.interval(maxIdleDrainPeriod)
+			.publishOn(batchScheduler)
 			.doOnNext { drainIfNecessary() }
 			.doOnError { error -> log.error("Batcher for shard $shardId errored", error) }
 			.retry()
