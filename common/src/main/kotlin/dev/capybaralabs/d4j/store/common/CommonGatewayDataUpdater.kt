@@ -135,7 +135,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val completeSink = Sinks.empty<Void>()
 		batchers.compute(shardId) { _, value ->
 			val batcher = value ?: Batcher(shardId) { onGuildCreateBatch(shardId, it) }
-			batcher.append(Tuples.of(dispatch, completeSink))
+			batcher.queue(Tuples.of(dispatch, completeSink))
 			batcher
 		}
 		return completeSink.asMono()

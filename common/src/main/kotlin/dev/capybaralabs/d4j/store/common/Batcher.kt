@@ -17,28 +17,33 @@ class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2
 	}
 
 	private val batchSize = 100 // TODO tune
-	private val maxDrainPeriod = Duration.ofSeconds(10) // TODO tune
+	private val maxIdleDrainPeriod = Duration.ofSeconds(1) // TODO tune
 	private val queue: BlockingQueue<Tuple2<T, Sinks.Empty<Void>>> = LinkedBlockingQueue()
-	private var lastDrained: Instant = Instant.now()
+	private var lastQueued: Instant = Instant.now()
 
 	init {
-		Flux.interval(maxDrainPeriod)
+		Flux.interval(maxIdleDrainPeriod)
 			.doOnNext { drainIfNecessary() }
 			.doOnError { error -> log.error("Batcher for shard $shardId errored", error) }
 			.retry()
 			.subscribe()
 	}
 
-	fun append(element: Tuple2<T, Sinks.Empty<Void>>) {
+	fun queue(element: Tuple2<T, Sinks.Empty<Void>>) {
 		queue.add(element)
+		lastQueued = Instant.now()
 		drainIfNecessary()
 	}
 
 	private fun drainIfNecessary() {
-		if (queue.size >= batchSize || lastDrained.plus(maxDrainPeriod).isBefore(Instant.now())) {
+		if (queue.isEmpty()) {
+			return
+		}
+		if (queue.size >= batchSize || lastQueued.plus(maxIdleDrainPeriod).isBefore(Instant.now())) {
 			val batch = ArrayList<Tuple2<T, Sinks.Empty<Void>>>()
 			queue.drainTo(batch)
 			if (batch.isNotEmpty()) {
+				log.debug("Batch executing with ${batch.size} elements")
 				batchMethod.invoke(batch)
 			}
 		}
