@@ -19,7 +19,7 @@ class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2
 		val log: Logger = LoggerFactory.getLogger(Batcher::class.java)
 	}
 
-	private val batchSize = 100 // TODO tune
+	private val batchSize = 256 // TODO tune
 	private val maxIdleDrainPeriod = Duration.ofSeconds(1) // TODO tune
 	private val queue: BlockingQueue<Tuple2<T, Sinks.Empty<Void>>> = LinkedBlockingQueue()
 	private var lastQueued: Instant = Instant.now()
@@ -47,7 +47,7 @@ class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2
 			val batch = ArrayList<Tuple2<T, Sinks.Empty<Void>>>()
 			queue.drainTo(batch)
 			if (batch.isNotEmpty()) {
-				log.debug("Batch executing with ${batch.size} elements")
+				log.debug("Batch on shard $shardId executing with ${batch.size} elements")
 				batchMethod.invoke(batch)
 			}
 		}
