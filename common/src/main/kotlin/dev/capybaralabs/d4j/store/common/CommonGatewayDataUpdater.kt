@@ -178,23 +178,23 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.let { repos.presences.saveAll(it, shardId) }
 
 		// TODO why? addGuildMember does not create any presences
-		val saveOfflinePresences = guildCreateDatas
-			.associateBy({ it.id().asLong() }) { it.members() }
-			.map { (guildId, members) ->
-				Flux.fromIterable(members)
-					.filterWhen { member ->
-						repos.presences.getPresenceById(guildId, member.user().id().asLong())
-							.hasElement().map { !it }
-					}
-					.map { createOfflinePresence(it) }
-					.collectList()
-					.map { offlinePresences -> Pair(guildId, offlinePresences) }
-			}
-			.let { Flux.fromIterable(it) }
-			.flatMap { it }
-			.collectList()
-			.map { it.toMap() }
-			.flatMap { repos.presences.saveAll(it, shardId) }
+//		val saveOfflinePresences = guildCreateDatas
+//			.associateBy({ it.id().asLong() }) { it.members() }
+//			.map { (guildId, members) ->
+//				Flux.fromIterable(members)
+//					.filterWhen { member ->
+//						repos.presences.getPresenceById(guildId, member.user().id().asLong())
+//							.hasElement().map { !it }
+//					}
+//					.map { createOfflinePresence(it) }
+//					.collectList()
+//					.map { offlinePresences -> Pair(guildId, offlinePresences) }
+//			}
+//			.let { Flux.fromIterable(it) }
+//			.flatMap { it }
+//			.collectList()
+//			.map { it.toMap() }
+//			.flatMap { repos.presences.saveAll(it, shardId) }
 
 		val saveRoles = guildCreateDatas
 			.associateBy({ it.id().asLong() }, { it.roles() })
@@ -217,7 +217,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.and(saveChannels)
 			.and(saveEmojis)
 			.and(saveMembers)
-			.and(savePresences.then(saveOfflinePresences))
+			.and(savePresences/*.then(saveOfflinePresences)*/)
 			.and(saveRoles)
 			.and(saveUsers)
 			.and(saveVoiceStates)
