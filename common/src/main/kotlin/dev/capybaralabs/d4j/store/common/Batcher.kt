@@ -11,9 +11,9 @@ import reactor.core.publisher.Sinks
 import reactor.core.scheduler.Schedulers
 import reactor.util.function.Tuple2
 
-private val batchScheduler = Schedulers.newSingle("batchers")
-
 class Batcher<T>(private val shardId: Int, private val batchMethod: (List<Tuple2<T, Sinks.Empty<Void>>>) -> Unit) {
+
+	private val batchScheduler = Schedulers.newSingle("batcher-shard-$shardId")
 
 	companion object {
 		val log: Logger = LoggerFactory.getLogger(Batcher::class.java)
