@@ -23,7 +23,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresUserRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_user (
@@ -46,7 +46,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresUserRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_user VALUES ($1, $2 ::jsonb)
@@ -66,7 +66,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteById(userId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresUserRepository.deleteById") {
 				it.createStatement("DELETE FROM d4j_discord_user WHERE user_id = $1")
 					.bind("$1", userId)
 					.executeConsumingSingle().toLong()
@@ -77,7 +77,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 
 	override fun countUsers(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresUserRepository.countUsers") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_user")
 					.execute().mapToCount()
 			}
@@ -86,7 +86,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 
 	override fun getUsers(): Flux<UserData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresUserRepository.getUsers") {
 				it.createStatement("SELECT data FROM d4j_discord_user")
 					.execute().deserializeManyFromData(UserData::class.java, serde)
 			}
@@ -95,7 +95,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 
 	override fun getUserById(userId: Long): Mono<UserData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresUserRepository.getUserById") {
 				it.createStatement("SELECT data FROM d4j_discord_user WHERE user_id = $1")
 					.bind("$1", userId)
 					.execute().deserializeOneFromData(UserData::class.java, serde)

@@ -22,7 +22,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 	GuildRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresGuildRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_guild (
@@ -45,7 +45,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 			return Mono.empty()
 		}
 		return Mono.defer {
-			withConnection(factory) { connection ->
+			withConnection(factory, "PostgresGuildRepository.saveAll") { connection ->
 				val statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_guild VALUES ($1, $2::jsonb, $3)
@@ -67,7 +67,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 
 	override fun delete(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresGuildRepository.delete") {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
@@ -89,7 +89,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresGuildRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_guild WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -99,7 +99,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 
 	override fun countGuilds(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresGuildRepository.countGuilds") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_guild")
 					.execute().mapToCount()
 			}
@@ -108,7 +108,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 
 	override fun getGuildById(guildId: Long): Mono<GuildData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresGuildRepository.getGuilyById") {
 				it.createStatement("SELECT data FROM d4j_discord_guild WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeOneFromData(GuildData::class.java, serde)
@@ -118,7 +118,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 
 	override fun getGuilds(): Flux<GuildData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresGuildRepository.getGuilds") {
 				it.createStatement("SELECT data FROM d4j_discord_guild")
 					.execute().deserializeManyFromData(GuildData::class.java, serde)
 			}

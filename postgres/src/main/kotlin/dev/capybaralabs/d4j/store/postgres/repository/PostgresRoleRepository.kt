@@ -21,7 +21,7 @@ import reactor.core.publisher.Mono
 internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) : RoleRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresRoleRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_role (
@@ -47,7 +47,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
@@ -73,7 +73,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteById") {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
 					.executeConsumingSingle().toLong()
@@ -83,7 +83,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteByGuildId") {
 				it
 					.createStatement("DELETE FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
@@ -94,7 +94,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -104,7 +104,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun countRoles(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.countRoles") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role")
 					.execute().mapToCount()
 			}
@@ -113,7 +113,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun countRolesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.countRolesInGuild") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().mapToCount()
@@ -123,7 +123,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRoles(): Flux<RoleData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresRoleRepository.getRoles") {
 				it.createStatement("SELECT data FROM d4j_discord_role")
 					.execute().deserializeManyFromData(RoleData::class.java, serde)
 			}
@@ -132,7 +132,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRolesInGuild(guildId: Long): Flux<RoleData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresRoleRepository.getRolesInGuild") {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeManyFromData(RoleData::class.java, serde)
@@ -142,7 +142,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRoleById(roleId: Long): Mono<RoleData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.getRoleById") {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
 					.execute().deserializeOneFromData(RoleData::class.java, serde)

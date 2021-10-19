@@ -22,7 +22,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 	ChannelRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresChannelRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_channel (
@@ -48,7 +48,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 			return Mono.empty()
 		}
 		return Mono.defer {
-			withConnection(factory) { connection ->
+			withConnection(factory, "PostgresChannelRepository.saveAll") { connection ->
 				var statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3::jsonb, $4)
@@ -79,7 +79,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.delete") {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE channel_id = $1")
 					.bind("$1", channelId)
 					.executeConsumingSingle().toLong()
@@ -89,7 +89,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.deleteByGuildId") {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
@@ -100,7 +100,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_channel WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -110,7 +110,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun countChannels(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.countChannels") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_channel")
 					.execute().mapToCount()
 			}
@@ -119,7 +119,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.countChannelsInGuild") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_channel WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().mapToCount()
@@ -129,7 +129,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresChannelRepository.getChannelById") {
 				it.createStatement("SELECT data FROM d4j_discord_channel WHERE channel_id = $1")
 					.bind("$1", channelId)
 					.execute().deserializeOneFromData(ChannelData::class.java, serde)
@@ -139,7 +139,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun getChannels(): Flux<ChannelData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresChannelRepository.getChannels") {
 				it.createStatement("SELECT data FROM d4j_discord_channel")
 					.execute().deserializeManyFromData(ChannelData::class.java, serde)
 			}
@@ -148,7 +148,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 
 	override fun getChannelsInGuild(guildId: Long): Flux<ChannelData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresChannelRepository.getChannelsInGuild") {
 				it.createStatement("SELECT data FROM d4j_discord_channel WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeManyFromData(ChannelData::class.java, serde)

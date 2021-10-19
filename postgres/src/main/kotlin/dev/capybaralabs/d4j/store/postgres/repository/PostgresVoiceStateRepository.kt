@@ -23,7 +23,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 	VoiceStateRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresVoiceStateRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_voice_state (
@@ -50,7 +50,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4::jsonb, $5)
@@ -77,7 +77,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.deleteById") {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE user_id = $1 AND guild_id = $2")
 					.bind("$1", userId)
 					.bind("$2", guildId)
@@ -88,7 +88,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.deleteByGuildId") {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
@@ -98,7 +98,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_voice_state WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -108,7 +108,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun countVoiceStates(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.countVoiceStates") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state")
 					.execute().mapToCount()
 			}
@@ -117,7 +117,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun countVoiceStatesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.countVoiceStatesInGuild") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().mapToCount()
@@ -127,7 +127,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun countVoiceStatesInChannel(guildId: Long, channelId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.countVoiceStatesInChannel") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_voice_state WHERE guild_id = $1 AND channel_id = $2")
 					.bind("$1", guildId)
 					.bind("$2", channelId)
@@ -138,7 +138,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun getVoiceStates(): Flux<VoiceStateData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresVoiceStateRepository.getVoiceStates") {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state")
 					.execute().deserializeManyFromData(VoiceStateData::class.java, serde)
 			}
@@ -147,7 +147,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun getVoiceStatesInChannel(guildId: Long, channelId: Long): Flux<VoiceStateData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresVoiceStateRepository.getVoiceStatesInChannel") {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1 AND channel_id = $2")
 					.bind("$1", guildId)
 					.bind("$2", channelId)
@@ -158,7 +158,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun getVoiceStatesInGuild(guildId: Long): Flux<VoiceStateData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresVoiceStateRepository.getVoiceStatesInGuild") {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeManyFromData(VoiceStateData::class.java, serde)
@@ -168,7 +168,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 
 	override fun getVoiceStateById(guildId: Long, userId: Long): Mono<VoiceStateData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresVoiceStateRepository.getVoiceStateById") {
 				it.createStatement("SELECT data FROM d4j_discord_voice_state WHERE guild_id = $1 AND user_id = $2")
 					.bind("$1", guildId)
 					.bind("$2", userId)

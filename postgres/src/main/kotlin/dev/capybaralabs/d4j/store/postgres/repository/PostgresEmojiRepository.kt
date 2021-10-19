@@ -22,7 +22,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 	EmojiRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresEmojiRepository.init") {
 			it.createStatement(
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_emoji (
@@ -50,7 +50,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3::jsonb, $4)
@@ -76,7 +76,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.deleteByIds") {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE emoji_id = ANY($1) AND guild_id = $2")
 					.bind("$1", emojiIds.toTypedArray())
 					.bind("$2", guildId)
@@ -87,7 +87,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepositoryl.deleteByGuildId") {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.executeConsumingSingle().toLong()
@@ -98,7 +98,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_emoji WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -108,7 +108,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun countEmojis(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.countEmojis") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_emoji")
 					.execute().mapToCount()
 			}
@@ -117,7 +117,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun countEmojisInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.countEmojisInGuild") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_emoji WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().mapToCount()
@@ -127,7 +127,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun getEmojis(): Flux<EmojiData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresEmojiRepository.getEmojis") {
 				it.createStatement("SELECT data FROM d4j_discord_emoji")
 					.execute().deserializeManyFromData(EmojiData::class.java, serde)
 			}
@@ -136,7 +136,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun getEmojisInGuild(guildId: Long): Flux<EmojiData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresEmojiRepository.getEmojisInGuild") {
 				it.createStatement("SELECT data FROM d4j_discord_emoji WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeManyFromData(EmojiData::class.java, serde)
@@ -146,7 +146,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 
 	override fun getEmojiById(guildId: Long, emojiId: Long): Mono<EmojiData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresEmojiRepository.getEmojiById") {
 				it.createStatement("SELECT data FROM d4j_discord_emoji WHERE guild_id = $1 AND emoji_id = $2")
 					.bind("$1", guildId)
 					.bind("$2", emojiId)
