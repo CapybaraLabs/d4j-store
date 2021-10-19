@@ -27,7 +27,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_guild (
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_guild_pkey PRIMARY KEY (guild_id)
 				)
@@ -48,14 +48,14 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 			withConnection(factory, "PostgresGuildRepository.saveAll") { connection ->
 				val statement = connection.createStatement(
 					"""
-					INSERT INTO d4j_discord_guild VALUES ($1, $2::jsonb, $3)
-						ON CONFLICT (guild_id) DO UPDATE SET data = $2::jsonb, shard_index = $3
+					INSERT INTO d4j_discord_guild VALUES ($1, $2, $3)
+						ON CONFLICT (guild_id) DO UPDATE SET data = $2, shard_index = $3
 					""".trimIndent()
 				)
 
 				for (guild in guilds) {
 					statement.bind("$1", guild.id().asLong())
-						.bind("$2", serde.serializeToString(guild))
+						.bind("$2", serde.serialize(guild))
 						.bind("$3", shardId)
 						.add()
 				}

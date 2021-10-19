@@ -28,7 +28,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 				CREATE TABLE IF NOT EXISTS d4j_discord_channel (
 					channel_id BIGINT NOT NULL,
 					guild_id BIGINT,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_channel_pkey PRIMARY KEY (channel_id)
 				)
@@ -51,8 +51,8 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 			withConnection(factory, "PostgresChannelRepository.saveAll") { connection ->
 				var statement = connection.createStatement(
 					"""
-					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (channel_id) DO UPDATE SET guild_id = $2, data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3, $4)
+						ON CONFLICT (channel_id) DO UPDATE SET guild_id = $2, data = $3, shard_index = $4
 					""".trimIndent()
 				)
 
@@ -66,7 +66,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 						statement.bindNull("$2", java.lang.Long::class.java)
 					}
 					statement
-						.bind("$3", serde.serializeToString(channel))
+						.bind("$3", serde.serialize(channel))
 						.bind("$4", shardId)
 
 					statement.add()

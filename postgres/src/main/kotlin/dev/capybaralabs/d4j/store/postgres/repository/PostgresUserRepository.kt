@@ -28,7 +28,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 				"""
 				CREATE TABLE IF NOT EXISTS d4j_discord_user (
 				    user_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					CONSTRAINT d4j_discord_user_pkey PRIMARY KEY (user_id)
 				)
 				""".trimIndent()
@@ -49,14 +49,14 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 			withConnection(factory, "PostgresUserRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_user VALUES ($1, $2 ::jsonb)
-						ON CONFLICT (user_id) DO UPDATE SET data = $2::jsonb
+					INSERT INTO d4j_discord_user VALUES ($1, $2)
+						ON CONFLICT (user_id) DO UPDATE SET data = $2
 					""".trimIndent()
 				)
 				for (user in users) {
 					statement
 						.bind("$1", user.id().asLong())
-						.bind("$2", serde.serializeToString(user))
+						.bind("$2", serde.serialize(user))
 						.add()
 				}
 				statement.executeConsumingAll().then()

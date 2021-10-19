@@ -29,7 +29,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 				CREATE TABLE IF NOT EXISTS d4j_discord_member (
 					user_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_member_pkey PRIMARY KEY (guild_id, user_id)
 				)
@@ -53,8 +53,8 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 			withConnection(factory, "PostgresMemberRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_member VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_member VALUES ($1, $2, $3, $4)
+						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 
@@ -64,7 +64,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 						statement
 							.bind("$1", member.user().id().asLong())
 							.bind("$2", guildId)
-							.bind("$3", serde.serializeToString(member))
+							.bind("$3", serde.serialize(member))
 							.bind("$4", shardId)
 							.add()
 					}

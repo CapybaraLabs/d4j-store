@@ -28,7 +28,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 				CREATE TABLE IF NOT EXISTS d4j_discord_emoji (
 				    emoji_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_emoji_pkey PRIMARY KEY (emoji_id)
 				)
@@ -53,8 +53,8 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 			withConnection(factory, "PostgresEmojiRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (emoji_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3, $4)
+						ON CONFLICT (emoji_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 
@@ -64,7 +64,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 						statement
 							.bind("$1", emoji.id().orElseThrow().asLong())
 							.bind("$2", guildId)
-							.bind("$3", serde.serializeToString(emoji))
+							.bind("$3", serde.serialize(emoji))
 							.bind("$4", shardId)
 							.add()
 					}

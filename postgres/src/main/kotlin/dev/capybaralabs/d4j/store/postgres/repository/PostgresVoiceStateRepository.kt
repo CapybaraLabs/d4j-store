@@ -30,7 +30,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 					user_id BIGINT NOT NULL,
 					channel_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_voice_state_pkey PRIMARY KEY (user_id, channel_id)
 				)
@@ -53,8 +53,8 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 			withConnection(factory, "PostgresVoiceStateRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4::jsonb, $5)
-						ON CONFLICT (user_id, channel_id) DO UPDATE SET guild_id = $3, data = $4::jsonb, shard_index = $5
+					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4, $5)
+						ON CONFLICT (user_id, channel_id) DO UPDATE SET guild_id = $3, data = $4, shard_index = $5
 					""".trimIndent()
 				)
 
@@ -63,7 +63,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 						.bind("$1", voiceState.userId().asLong())
 						.bind("$2", voiceState.channelId().orElseThrow().asLong())
 						.bind("$3", voiceState.guildId().get().asLong())
-						.bind("$4", serde.serializeToString(voiceState))
+						.bind("$4", serde.serialize(voiceState))
 						.bind("$5", shardId)
 						.add()
 				}

@@ -27,7 +27,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 				CREATE TABLE IF NOT EXISTS d4j_discord_presence (
 					user_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_presence_pkey PRIMARY KEY (guild_id, user_id)
 				)
@@ -51,8 +51,8 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 			withConnection(factory, "PostgresPresenceRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3, $4)
+						ON CONFLICT (guild_id, user_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 				for (guildPresences in filtered) {
@@ -61,7 +61,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 						statement
 							.bind("$1", presence.user().id().asLong())
 							.bind("$2", guildId)
-							.bind("$3", serde.serializeToString(presence))
+							.bind("$3", serde.serialize(presence))
 							.bind("$4", shardId)
 							.add()
 					}

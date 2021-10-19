@@ -28,7 +28,7 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 				CREATE TABLE IF NOT EXISTS d4j_discord_message (
 				    message_id BIGINT NOT NULL,
 					channel_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_message_pkey PRIMARY KEY (message_id)
 				)
@@ -42,13 +42,13 @@ internal class PostgresMessageRepository(private val factory: ConnectionFactory,
 			withConnection(factory, "PostgresMessageRepository.save") {
 				it.createStatement(
 					"""
-					INSERT INTO d4j_discord_message VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (message_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_message VALUES ($1, $2, $3, $4)
+						ON CONFLICT (message_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 					.bind("$1", message.id().asLong())
 					.bind("$2", message.channelId().asLong())
-					.bind("$3", serde.serializeToString(message))
+					.bind("$3", serde.serialize(message))
 					.bind("$4", shardId)
 					.executeConsumingSingle().then()
 			}

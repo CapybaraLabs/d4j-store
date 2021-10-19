@@ -27,7 +27,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 				CREATE TABLE IF NOT EXISTS d4j_discord_role (
 				    role_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id)
 				)
@@ -50,8 +50,8 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 			withConnection(factory, "PostgresRoleRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (role_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_role VALUES ($1, $2, $3, $4)
+						ON CONFLICT (role_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 
@@ -61,7 +61,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 						statement
 							.bind("$1", role.id().asLong())
 							.bind("$2", guildId)
-							.bind("$3", serde.serializeToString(role))
+							.bind("$3", serde.serialize(role))
 							.bind("$4", shardId)
 							.add()
 					}
