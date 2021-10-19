@@ -26,7 +26,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		withConnectionMany(factory, "PostgresVoiceStateRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_voice_state (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_voice_state (
 					user_id BIGINT NOT NULL,
 					channel_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,

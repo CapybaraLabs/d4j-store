@@ -26,7 +26,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		withConnectionMany(factory, "PostgresUserRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_user (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_user (
 				    user_id BIGINT NOT NULL,
 					data BYTEA NOT NULL,
 					CONSTRAINT d4j_discord_user_pkey PRIMARY KEY (user_id)

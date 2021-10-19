@@ -25,7 +25,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 		withConnectionMany(factory, "PostgresChannelRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_channel (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_channel (
 					channel_id BIGINT NOT NULL,
 					guild_id BIGINT,
 					data BYTEA NOT NULL,

@@ -24,7 +24,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		withConnectionMany(factory, "PostgresPresenceRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_presence (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_presence (
 					user_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
 					data BYTEA NOT NULL,

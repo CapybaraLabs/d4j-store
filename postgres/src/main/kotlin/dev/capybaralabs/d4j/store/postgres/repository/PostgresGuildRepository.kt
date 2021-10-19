@@ -25,7 +25,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 		withConnectionMany(factory, "PostgresGuildRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_guild (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_guild (
 					guild_id BIGINT NOT NULL,
 					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,

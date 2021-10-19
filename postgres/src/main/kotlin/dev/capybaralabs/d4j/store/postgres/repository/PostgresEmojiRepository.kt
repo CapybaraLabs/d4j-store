@@ -25,7 +25,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		withConnectionMany(factory, "PostgresEmojiRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_emoji (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_emoji (
 				    emoji_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
 					data BYTEA NOT NULL,

@@ -24,7 +24,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		withConnectionMany(factory, "PostgresRoleRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_role (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_role (
 				    role_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
 					data BYTEA NOT NULL,
