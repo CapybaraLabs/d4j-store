@@ -1,6 +1,5 @@
 package dev.capybaralabs.d4j.store.tck
 
-import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildUpdate
@@ -10,8 +9,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 
-internal class GuildTest(storeLayout: StoreLayout) {
+internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 
+	private val storeLayout = storeLayoutProvider.defaultLayout()
 	private val accessor = storeLayout.dataAccessor
 	private val updater = storeLayout.gatewayDataUpdater
 

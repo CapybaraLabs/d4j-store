@@ -1,6 +1,5 @@
 package dev.capybaralabs.d4j.store.tck
 
-import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.EmojiData
 import discord4j.discordjson.json.ImmutableReactionData
 import discord4j.discordjson.json.PartialApplicationInfoData
@@ -20,8 +19,9 @@ import org.junit.jupiter.api.parallel.Isolated
 
 @Isolated("use of onReady global state")
 @TestMethodOrder(value = OrderAnnotation::class)
-internal class ReactionTest(storeLayout: StoreLayout) {
+internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 
+	private val storeLayout = storeLayoutProvider.defaultLayout()
 	private val accessor = storeLayout.dataAccessor
 	private val updater = storeLayout.gatewayDataUpdater
 
