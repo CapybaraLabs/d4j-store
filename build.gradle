@@ -33,8 +33,10 @@ configure(subprojects.findAll { it.name != 'platform' }) {
 	apply plugin: "org.jetbrains.kotlin.jvm"
 	apply plugin: "com.adarshr.test-logger"
 
-	tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-		kotlinOptions.jvmTarget = 11
+	kotlin {
+		jvmToolchain {
+			languageVersion.set(JavaLanguageVersion.of(11))
+		}
 	}
 
 	configurations {
