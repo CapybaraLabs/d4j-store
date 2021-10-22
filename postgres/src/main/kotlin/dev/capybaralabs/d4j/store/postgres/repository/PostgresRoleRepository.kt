@@ -18,17 +18,16 @@ import reactor.core.publisher.Mono
 /**
  * Concerned with operations on the role table
  */
-internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) :
-	RoleRepository {
+internal class PostgresRoleRepository(private val factory: ConnectionFactory, private val serde: PostgresSerde) : RoleRepository {
 
 	init {
-		withConnectionMany(factory) {
+		withConnectionMany(factory, "PostgresRoleRepository.init") {
 			it.createStatement(
 				"""
-				CREATE TABLE IF NOT EXISTS d4j_discord_role (
+				CREATE UNLOGGED TABLE IF NOT EXISTS d4j_discord_role (
 				    role_id BIGINT NOT NULL,
 					guild_id BIGINT NOT NULL,
-					data JSONB NOT NULL,
+					data BYTEA NOT NULL,
 					shard_index INT NOT NULL,
 					CONSTRAINT d4j_discord_role_pkey PRIMARY KEY (role_id)
 				)
@@ -38,30 +37,34 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 	}
 
 	override fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(role), shardId).then()
+		return saveAll(mapOf(Pair(guildId, listOf(role))), shardId).then()
 	}
 
-	override fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void> {
-		if (roles.isEmpty()) {
+	override fun saveAll(rolesByGuild: Map<Long, List<RoleData>>, shardId: Int): Mono<Void> {
+		val filtered = rolesByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
 
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.saveAll") {
 				val statement = it.createStatement(
 					"""
-					INSERT INTO d4j_discord_role VALUES ($1, $2, $3::jsonb, $4)
-						ON CONFLICT (role_id) DO UPDATE SET data = $3::jsonb, shard_index = $4
+					INSERT INTO d4j_discord_role VALUES ($1, $2, $3, $4)
+						ON CONFLICT (role_id) DO UPDATE SET data = $3, shard_index = $4
 					""".trimIndent()
 				)
 
-				for (role in roles) {
-					statement
-						.bind("$1", role.id().asLong())
-						.bind("$2", guildId)
-						.bind("$3", serde.serializeToString(role))
-						.bind("$4", shardId)
-						.add()
+				for (guildRoles in filtered) {
+					val guildId = guildRoles.key
+					for (role in guildRoles.value) {
+						statement
+							.bind("$1", role.id().asLong())
+							.bind("$2", guildId)
+							.bind("$3", serde.serialize(role))
+							.bind("$4", shardId)
+							.add()
+					}
 				}
 				statement.executeConsumingAll().then()
 			}
@@ -70,7 +73,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteById(roleId: Long, guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteById") {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
 					.executeConsumingSingle().toLong()
@@ -80,7 +83,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteByGuildId") {
 				it
 					.createStatement("DELETE FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
@@ -91,7 +94,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.deleteByShardId") {
 				it.createStatement("DELETE FROM d4j_discord_role WHERE shard_index = $1")
 					.bind("$1", shardId)
 					.executeConsumingSingle().toLong()
@@ -101,7 +104,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun countRoles(): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.countRoles") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role")
 					.execute().mapToCount()
 			}
@@ -110,7 +113,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun countRolesInGuild(guildId: Long): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.countRolesInGuild") {
 				it.createStatement("SELECT count(*) AS count FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().mapToCount()
@@ -120,7 +123,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRoles(): Flux<RoleData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresRoleRepository.getRoles") {
 				it.createStatement("SELECT data FROM d4j_discord_role")
 					.execute().deserializeManyFromData(RoleData::class.java, serde)
 			}
@@ -129,7 +132,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRolesInGuild(guildId: Long): Flux<RoleData> {
 		return Flux.defer {
-			withConnectionMany(factory) {
+			withConnectionMany(factory, "PostgresRoleRepository.getRolesInGuild") {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE guild_id = $1")
 					.bind("$1", guildId)
 					.execute().deserializeManyFromData(RoleData::class.java, serde)
@@ -139,7 +142,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 
 	override fun getRoleById(roleId: Long): Mono<RoleData> {
 		return Mono.defer {
-			withConnection(factory) {
+			withConnection(factory, "PostgresRoleRepository.getRoleById") {
 				it.createStatement("SELECT data FROM d4j_discord_role WHERE role_id = $1")
 					.bind("$1", roleId)
 					.execute().deserializeOneFromData(RoleData::class.java, serde)

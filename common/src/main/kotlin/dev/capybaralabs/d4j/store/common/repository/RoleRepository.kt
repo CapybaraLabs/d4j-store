@@ -6,7 +6,7 @@ import reactor.core.publisher.Mono
 
 interface RoleRepository {
 	fun save(guildId: Long, role: RoleData, shardId: Int): Mono<Void>
-	fun saveAll(guildId: Long, roles: List<RoleData>, shardId: Int): Mono<Void>
+	fun saveAll(rolesByGuild: Map<Long, List<RoleData>>, shardId: Int): Mono<Void>
 
 	fun deleteById(roleId: Long, guildId: Long): Mono<Long>
 	fun deleteByGuildId(guildId: Long): Mono<Long>

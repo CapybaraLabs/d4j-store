@@ -4,7 +4,9 @@ import io.r2dbc.spi.Connection
 import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.Result
 import io.r2dbc.spi.Statement
+import java.util.concurrent.atomic.AtomicLong
 import org.reactivestreams.Publisher
+import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toFlux
@@ -14,24 +16,53 @@ import reactor.kotlin.core.publisher.toMono
 /**
  * Run a closure returning a Mono in the a scope of a database connection, handling the lifecycle (closing the connection)
  */
-internal fun <T> withConnection(factory: ConnectionFactory, closure: (Connection) -> Mono<T>): Mono<T> {
-	return Mono.usingWhen(
+internal fun <T> withConnection(factory: ConnectionFactory, operation: String, closure: (Connection) -> Mono<T>): Mono<T> {
+	return instrumented(Mono.usingWhen(
 		factory.create(),
 		{ closure.invoke(it) },
 		{ it.close() }
-	)
+	), operation)
 }
 
 /**
  * Run a closure returning a Flux in the a scope of a database connection, handling the lifecycle (closing the connection)
  */
-internal fun <T> withConnectionMany(factory: ConnectionFactory, closure: (Connection) -> Flux<T>): Flux<T> {
-	return Flux.usingWhen(
+internal fun <T> withConnectionMany(factory: ConnectionFactory, operation: String, closure: (Connection) -> Flux<T>): Flux<T> {
+	return instrumented(Flux.usingWhen(
 		factory.create(),
 		{ closure.invoke(it) },
 		{ it.close() }
-	)
+	), operation)
 }
+
+internal fun <T> instrumented(mono: Mono<T>, operation: String): Mono<T> {
+	val subscribeTimeHolder = AtomicLong()
+	return mono
+		.doOnSubscribe { subscribeTimeHolder.set(System.nanoTime()) }
+		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation) }
+}
+
+internal fun <T> instrumented(flux: Flux<T>, operation: String): Flux<T> {
+	val subscribeTimeHolder = AtomicLong()
+	return flux
+		.doOnSubscribe { subscribeTimeHolder.set(System.nanoTime()) }
+		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation) }
+}
+
+
+private val log = LoggerFactory.getLogger("dev.capybaralabs.d4j.store.postgres.PostgreStoreExtensions")
+private const val NANOSECONDS_PER_MILLISECOND = 1000000.0
+
+private fun doInstrument(startTime: Long, operation: String) {
+	if (startTime == 0L) {
+		log.warn("No subscribe time present for operation {}", operation)
+		return
+	}
+	val nanos = System.nanoTime() - startTime
+	val millis: Double = nanos / NANOSECONDS_PER_MILLISECOND
+	log.trace("{} took {}ms", operation, millis)
+}
+
 
 /**
  * Transform a single result row with a "count" column into a Long

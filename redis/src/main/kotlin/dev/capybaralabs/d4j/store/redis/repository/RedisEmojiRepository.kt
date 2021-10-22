@@ -23,22 +23,30 @@ internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : Red
 	private val gShardIndex = twoWayIndex("$emojiKey:guild-shard-index", factory)
 
 	override fun save(guildId: Long, emoji: EmojiData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(emoji), shardId)
+		return saveAll(mapOf(Pair(guildId, listOf(emoji))), shardId)
 	}
 
-	override fun saveAll(guildId: Long, emojis: List<EmojiData>, shardId: Int): Mono<Void> {
-		val guildEmojis = emojis.filter { it.id().isPresent }
-		if (guildEmojis.isEmpty()) {
+	override fun saveAll(emojisByGuild: Map<Long, List<EmojiData>>, shardId: Int): Mono<Void> {
+		val filtered = emojisByGuild.entries
+			.map { Pair(it.key, it.value.filter { emojiData -> emojiData.id().isPresent }) }
+			.filter { it.second.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
-		val ids = guildEmojis.map { it.id().orElseThrow().asLong() }
+
+		val ids = filtered.flatMap { it.second }.map { it.id().orElseThrow().asLong() }
+		val guilIds = filtered.map { it.first }
+		val emojiMap = filtered.flatMap { it.second }.associateBy { it.id().orElseThrow().asLong() }
 
 		return Mono.defer {
 			val addToShardIndex = shardIndex.addElements(shardId, ids)
-			val addToGuildIndex = guildIndex.addElements(guildId, *ids.toTypedArray())
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
+			val addToGuildIndex = Flux.fromIterable(
+				filtered
+					.map { guildIndex.addElements(it.first, *it.second.map { emoji -> emoji.id().orElseThrow().asLong() }.toTypedArray()) }
+			).flatMap { it }
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
 
-			val save = emojiOps.putAll(guildEmojis.associateBy { it.id().orElseThrow().asLong() })
+			val save = emojiOps.putAll(emojiMap)
 
 			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, save)
 		}

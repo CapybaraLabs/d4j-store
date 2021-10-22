@@ -22,23 +22,29 @@ internal class RedisVoiceStateRepository(prefix: String, factory: RedisFactory) 
 		return "$guildId:$userId"
 	}
 
-	override fun save(voiceState: VoiceStateData, shardId: Int, guildId: Long): Mono<Void> {
-		return saveAll(listOf(voiceState), shardId, guildId)
+	override fun save(voiceState: VoiceStateData, shardId: Int): Mono<Void> {
+		return saveAll(listOf(voiceState), shardId)
 	}
 
-	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int, guildId: Long): Mono<Void> {
+	override fun saveAll(voiceStates: List<VoiceStateData>, shardId: Int): Mono<Void> {
 		val voiceStatesInChannels = voiceStates.filter { it.channelId().isPresent && it.guildId().isPresent() }
 		if (voiceStatesInChannels.isEmpty()) {
 			return Mono.empty()
 		}
 
+		val voiceStatesByGuild = voiceStatesInChannels.groupBy { it.guildId().get().asLong() }
+		val voiceStatesById = voiceStatesInChannels.associateBy { voiceStateId(it.guildId().get().asLong(), it.userId().asLong()) }
+
 		return Mono.defer {
-			val userIds = voiceStatesInChannels.map { it.userId().asLong() }
+			val addToGuildIndex = Flux.fromIterable(
+				voiceStatesByGuild.map { entry ->
+					val guildId = entry.key
+					val userIds = entry.value.map { it.userId().asLong() }
+					guildIndex.addElements(guildId, *userIds.map { voiceStateId(guildId, it) }.toTypedArray())
+				}
+			).flatMap { it }
+			val addGuildToShardIndex = gShardIndex.addElements(shardId, voiceStatesByGuild.keys)
 
-			val addToGuildIndex = guildIndex.addElements(guildId, *userIds.map { voiceStateId(guildId, it) }.toTypedArray())
-			val addGuildToShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
-
-			val voiceStatesById = voiceStatesInChannels.associateBy { voiceStateId(guildId, it.userId().asLong()) }
 			val save = voiceStateOps.putAll(voiceStatesById)
 
 			Mono.`when`(addToGuildIndex, addGuildToShardIndex, save)

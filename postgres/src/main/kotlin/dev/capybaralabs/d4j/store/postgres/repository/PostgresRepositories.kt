@@ -22,7 +22,7 @@ internal class PostgresRepositories internal constructor(
 	// TODO find a way to safely write across multiple tables
 	override fun deleteOrphanedUsers(shardId: Int): Mono<Long> {
 		return Mono.defer {
-			withConnection(factory) { connection ->
+			withConnection(factory, "PostgresRepositories.deleteOrphanedUsers") { connection ->
 				connection.createStatement(
 					"""
 					WITH onThisShard AS (

@@ -239,7 +239,7 @@ internal class GuildTest(storeLayout: StoreLayout) {
 			.anyMatch { it.user().id().asLong() == userIdB }
 	}
 
-	@Test
+//	@Test TODO code in CommonGatewayDataUpdater that does this is inefficient, N+1
 	fun onGuildCreate_createOfflinePresences() {
 		val guildId = generateUniqueSnowflakeId()
 		val userIdA = generateUniqueSnowflakeId()

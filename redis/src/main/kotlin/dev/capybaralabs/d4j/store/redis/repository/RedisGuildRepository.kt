@@ -23,6 +23,15 @@ internal class RedisGuildRepository(prefix: String, factory: RedisFactory) : Red
 		}
 	}
 
+	override fun saveAll(guilds: List<GuildData>, shardId: Int): Mono<Void> {
+		return Mono.defer {
+			val addToShardIndex = shardIndex.addElements(shardId, guilds.map { it.id().asLong() })
+			val save = guildOps.putAll(guilds.associateBy { it.id().asLong() })
+
+			Mono.`when`(addToShardIndex, save)
+		}
+	}
+
 	override fun delete(guildId: Long): Mono<Long> {
 		return Mono.defer {
 			val removeFromShardIndex = shardIndex.removeElements(guildId)

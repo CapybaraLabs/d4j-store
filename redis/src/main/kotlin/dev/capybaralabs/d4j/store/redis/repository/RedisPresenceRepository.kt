@@ -23,20 +23,30 @@ internal class RedisPresenceRepository(prefix: String, factory: RedisFactory) : 
 	}
 
 	override fun save(guildId: Long, presence: PresenceData, shardId: Int): Mono<Void> {
-		return saveAll(guildId, listOf(presence), shardId)
+		return saveAll(mapOf(Pair(guildId, listOf(presence))), shardId)
 	}
 
-	override fun saveAll(guildId: Long, presences: List<PresenceData>, shardId: Int): Mono<Void> {
-		if (presences.isEmpty()) {
+	override fun saveAll(presencesByGuild: Map<Long, List<PresenceData>>, shardId: Int): Mono<Void> {
+		val filtered = presencesByGuild.filter { it.value.isNotEmpty() }
+		if (filtered.isEmpty()) {
 			return Mono.empty()
 		}
-		return Mono.defer {
-			val presenceIds = presences.map { presenceId(guildId, it.user().id().asLong()) }
-			val addToGuildIndex = guildIndex.addElements(guildId, *presenceIds.toTypedArray())
-			val addGuildToShardIndex = gShardIndex.addElements(shardId, listOf(guildId))
 
-			val presencesById = presences.associateBy { presenceId(guildId, it.user().id().asLong()) }
-			val save = presenceOps.putAll(presencesById)
+		val presenceMap = filtered
+			.flatMap { entry ->
+				entry.value.associateBy { presenceId(entry.key, it.user().id().asLong()) }.entries.map { it.toPair() }
+			}.toMap()
+		return Mono.defer {
+			val addToGuildIndex = Flux.fromIterable(
+				filtered.map {
+					guildIndex.addElements(
+						it.key, *it.value.map { presence -> presenceId(it.key, presence.user().id().asLong()) }.toTypedArray()
+					)
+				}
+			).flatMap { it }
+			val addGuildToShardIndex = gShardIndex.addElements(shardId, filtered.keys)
+
+			val save = presenceOps.putAll(presenceMap)
 
 			Mono.`when`(addToGuildIndex, addGuildToShardIndex, save)
 		}

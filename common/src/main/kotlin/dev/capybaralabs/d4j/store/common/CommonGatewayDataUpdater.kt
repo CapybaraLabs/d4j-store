@@ -45,10 +45,15 @@ import discord4j.discordjson.json.gateway.UserUpdate
 import discord4j.discordjson.json.gateway.VoiceStateUpdateDispatch
 import discord4j.discordjson.possible.Possible
 import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.LockSupport
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
+import reactor.util.function.Tuple2
+import reactor.util.function.Tuples
 
 
 /**
@@ -124,52 +129,101 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	}
 
 
+	private val batchers: MutableMap<Int, Batcher<GuildCreate>> = ConcurrentHashMap()
+
 	override fun onGuildCreate(shardId: Int, dispatch: GuildCreate): Mono<Void> {
-		val createData = dispatch.guild()
-		val guild = GuildData.builder()
-			.from(createData)
-			.roles(createData.roles().map { it.id() })
-			.emojis(createData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
-			.members(createData.members().map { it.user().id() }.distinct())
-			.channels(createData.channels().map { it.id() })
-			.build()
-		val guildId = guild.id().asLong()
+		val completeSink = Sinks.empty<Void>()
+		batchers.compute(shardId) { _, value ->
+			val batcher = value ?: Batcher(shardId) { onGuildCreateBatch(shardId, it) }
+			batcher.queue(Tuples.of(dispatch, completeSink))
+			batcher
+		}
+		return completeSink.asMono()
+	}
 
-		val saveGuild = repos.guilds.save(guild, shardId)
+	private fun onGuildCreateBatch(shardId: Int, batch: List<Tuple2<GuildCreate, Sinks.Empty<Void>>>) {
+		val guildCreateDatas = batch.map { it.t1.guild() }
+		val guildDatas = guildCreateDatas
+			.map { guildCreateData ->
+				GuildData.builder()
+					.from(guildCreateData)
+					.roles(guildCreateData.roles().map { it.id() })
+					.emojis(guildCreateData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
+					.members(guildCreateData.members().map { it.user().id() }.distinct())
+					.channels(guildCreateData.channels().map { it.id() })
+					.build()
+			}
 
-		val saveChannels = createData.channels()
-			.map { ChannelData.builder().from(it).guildId(guildId).build() }
-			.let { repos.channels.saveAll(it, shardId) }
+		val saveGuilds = repos.guilds.saveAll(guildDatas, shardId)
 
-		val saveEmojis = createData.emojis().let { repos.emojis.saveAll(guildId, it, shardId) }
-		val saveMembers = createData.members().let { repos.members.saveAll(guildId, it, shardId) }
-		val savePresences = createData.presences().let { repos.presences.saveAll(guildId, it, shardId) }
+		val saveChannels = guildCreateDatas.flatMap { guildCreateData ->
+			guildCreateData.channels().map { channelData ->
+				ChannelData.builder()
+					.from(channelData)
+					.guildId(guildCreateData.id().asLong())
+					.build()
+			}
+		}.let { repos.channels.saveAll(it, shardId) }
+
+		val saveEmojis = guildCreateDatas
+			.associateBy({ it.id().asLong() }, { it.emojis() })
+			.let { repos.emojis.saveAll(it, shardId) }
+
+		val saveMembers = guildCreateDatas
+			.associateBy({ it.id().asLong() }, { it.members() })
+			.let { repos.members.saveAll(it, shardId) }
+
+		val savePresences = guildCreateDatas
+			.associateBy({ it.id().asLong() }, { it.presences() })
+			.let { repos.presences.saveAll(it, shardId) }
 
 		// TODO why? addGuildMember does not create any presences
-		val saveOfflinePresences = Flux.fromIterable(createData.members())
-			.filterWhen { member ->
-				repos.presences.getPresenceById(guildId, member.user().id().asLong())
-					.hasElement().map { !it }
+//		val saveOfflinePresences = guildCreateDatas
+//			.associateBy({ it.id().asLong() }) { it.members() }
+//			.map { (guildId, members) ->
+//				Flux.fromIterable(members)
+//					.filterWhen { member ->
+//						repos.presences.getPresenceById(guildId, member.user().id().asLong())
+//							.hasElement().map { !it }
+//					}
+//					.map { createOfflinePresence(it) }
+//					.collectList()
+//					.map { offlinePresences -> Pair(guildId, offlinePresences) }
+//			}
+//			.let { Flux.fromIterable(it) }
+//			.flatMap { it }
+//			.collectList()
+//			.map { it.toMap() }
+//			.flatMap { repos.presences.saveAll(it, shardId) }
+
+		val saveRoles = guildCreateDatas
+			.associateBy({ it.id().asLong() }, { it.roles() })
+			.let { repos.roles.saveAll(it, shardId) }
+		val saveUsers = guildCreateDatas.flatMap { it.members() }.map { it.user() }.let { repos.users.saveAll(it) }
+
+		val saveVoiceStates = guildCreateDatas
+			.flatMap { guild ->
+				guild.voiceStates()
+					.map { VoiceStateData.builder().from(it).guildId(guild.id().asLong()).build() }
 			}
-			// TODO add bulk operations
-			.flatMap { repos.presences.save(guildId, createOfflinePresence(it), shardId) }
-			.then()
+			.let { repos.voiceStates.saveAll(it, shardId) }
 
-		val saveRoles = createData.roles().let { repos.roles.saveAll(guildId, it, shardId) }
-		val saveUsers = createData.members().map { it.user() }.let { repos.users.saveAll(it) }
-
-		val saveVoiceStates = createData.voiceStates()
-			.map { VoiceStateData.builder().from(it).guildId(guildId).build() }
-			.let { repos.voiceStates.saveAll(it, shardId, guildId) }
-
-		return saveGuild
+		val sinks = batch.map { it.t2 }
+		val retryAlways: Sinks.EmitFailureHandler = Sinks.EmitFailureHandler { _, _ ->
+			LockSupport.parkNanos(10)
+			true
+		}
+		saveGuilds
 			.and(saveChannels)
 			.and(saveEmojis)
 			.and(saveMembers)
-			.and(savePresences.then(saveOfflinePresences))
+			.and(savePresences/*.then(saveOfflinePresences)*/)
 			.and(saveRoles)
 			.and(saveUsers)
 			.and(saveVoiceStates)
+			.doOnSuccess { sinks.forEach { it.emitEmpty(retryAlways) } }
+			.doOnError { error -> sinks.forEach { it.emitError(error, retryAlways) } }
+			.subscribe()
 	}
 
 	private fun createOfflinePresence(member: MemberData): PresenceData {
@@ -248,7 +302,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		}
 
 		val saveEmojis = dispatch.emojis()
-			.let { repos.emojis.saveAll(guildId, it, shardId) }
+			.let { repos.emojis.saveAll(mapOf(Pair(guildId, it)), shardId) }
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
@@ -337,7 +391,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
 
-		val saveMembers = members.let { repos.members.saveAll(guildId, it, shardId) }
+		val saveMembers = members.let { repos.members.saveAll(mapOf(Pair(guildId, it)), shardId) }
 		val saveUsers = members.map { it.user() }.let { repos.users.saveAll(it) }
 
 		// TODO why? addGuildMember does not create any presences
@@ -774,7 +828,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val userId = voiceStateData.userId().asLong()
 
 		val saveNewOrRemove = if (voiceStateData.channelId().isPresent) {
-			repos.voiceStates.save(voiceStateData, shardId, guildId)
+			repos.voiceStates.save(voiceStateData, shardId)
 		} else {
 			repos.voiceStates.deleteById(guildId, userId)
 		}
