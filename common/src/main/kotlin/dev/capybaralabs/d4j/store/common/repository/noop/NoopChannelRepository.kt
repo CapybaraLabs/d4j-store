@@ -16,23 +16,23 @@ class NoopChannelRepository : ChannelRepository {
 	}
 
 	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countChannels(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getChannelById(channelId: Long): Mono<ChannelData> {

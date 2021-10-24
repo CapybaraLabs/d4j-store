@@ -16,23 +16,23 @@ class NoopEmojiRepository : EmojiRepository {
 	}
 
 	override fun deleteByIds(emojiIds: List<Long>, guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countEmojis(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countEmojisInGuild(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getEmojis(): Flux<EmojiData> {

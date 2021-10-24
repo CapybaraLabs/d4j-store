@@ -15,23 +15,23 @@ class NoopPresenceRepository : PresenceRepository {
 	}
 
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countPresences(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countPresencesInGuild(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getPresences(): Flux<PresenceData> {

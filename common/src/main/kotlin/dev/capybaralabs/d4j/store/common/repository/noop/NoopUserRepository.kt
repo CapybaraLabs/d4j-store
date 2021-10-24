@@ -15,11 +15,11 @@ class NoopUserRepository : UserRepository {
 	}
 
 	override fun deleteById(userId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countUsers(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getUsers(): Flux<UserData> {

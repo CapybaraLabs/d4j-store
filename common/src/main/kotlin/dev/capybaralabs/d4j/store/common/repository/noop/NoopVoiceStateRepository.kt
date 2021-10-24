@@ -15,27 +15,27 @@ class NoopVoiceStateRepository : VoiceStateRepository {
 	}
 
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countVoiceStates(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countVoiceStatesInGuild(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countVoiceStatesInChannel(guildId: Long, channelId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getVoiceStates(): Flux<VoiceStateData> {

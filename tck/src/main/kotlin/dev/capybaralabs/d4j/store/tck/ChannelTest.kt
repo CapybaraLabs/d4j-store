@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.tck
 
+import dev.capybaralabs.d4j.store.common.repository.flag.StoreFlag
 import discord4j.discordjson.Id
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.ChannelDelete
@@ -26,11 +27,7 @@ internal class ChannelTest(storeLayoutProvider: StoreLayoutProvider) {
 		val channelId = generateUniqueSnowflakeId()
 
 		val channelCreate = ChannelCreate.builder()
-			.channel(
-				channel(channelId)
-					.name("Emergency Medical Holographic Channel")
-					.build()
-			)
+			.channel(channel(channelId).name("Emergency Medical Holographic Channel").build())
 		updater.onChannelCreate(0, channelCreate.build()).block()
 
 		val channel = accessor.getChannelById(channelId).block()!!
@@ -41,6 +38,7 @@ internal class ChannelTest(storeLayoutProvider: StoreLayoutProvider) {
 
 		assertThat(accessor.channels.collectList().block())
 			.anyMatch { it.id().asLong() == channelId }
+		assertThat(accessor.countChannels().block()!!).isGreaterThan(0)
 	}
 
 	@Test
@@ -163,11 +161,7 @@ internal class ChannelTest(storeLayoutProvider: StoreLayoutProvider) {
 		val channelId = generateUniqueSnowflakeId()
 
 		val channelCreate = ChannelCreate.builder()
-			.channel(
-				channel(channelId)
-					.name("everybody gangsta until \u0000")
-					.build()
-			)
+			.channel(channel(channelId).name("everybody gangsta until \u0000").build())
 		updater.onChannelCreate(0, channelCreate.build()).block()
 
 		val channel = accessor.getChannelById(channelId).block()!!
@@ -181,5 +175,86 @@ internal class ChannelTest(storeLayoutProvider: StoreLayoutProvider) {
 
 		assertThat(accessor.channels.collectList().block())
 			.anyMatch { it.id().asLong() == channelId }
+	}
+
+
+	private val noop = storeLayoutProvider.withFlags(StoreFlag.allBut(StoreFlag.CHANNEL))
+	private val noopAccessor = noop.dataAccessor
+	private val noopUpdater = noop.gatewayDataUpdater
+
+	@Test
+	fun givenNoChannelStoreFlag_countIsZero() {
+//		noopAccessor.countChannelsInGuild() TODO with guild
+//		noopAccessor.getChannelsInGuild() TODO with guild
+		// TODO delete guild
+		// TODO delete shard
+		assertThat(noopAccessor.countChannels().block()!!).isZero
+	}
+
+	@Test
+	fun givenNoChannelStoreFlag_channelsIsEmpty() {
+		assertThat(noopAccessor.channels.collectList().block()).isEmpty()
+	}
+
+	@Test
+	fun givenNoChannelStoreFlag_onChannelCreate_doNotCreateChannel() {
+		val channelId = generateUniqueSnowflakeId()
+
+		val channelCreate = ChannelCreate.builder()
+			.channel(channel(channelId).name("Emergency Medical Holographic Channel").build())
+		noopUpdater.onChannelCreate(0, channelCreate.build()).block()
+
+		assertThat(accessor.getChannelById(channelId).blockOptional()).isEmpty
+		assertThat(accessor.channels.collectList().block())
+			.noneMatch { it.id().asLong() == channelId }
+
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
+		assertThat(noopUpdater.onChannelDelete(0, channelDelete.build()).blockOptional()).isEmpty
+		assertThat(updater.onChannelDelete(0, channelDelete.build()).blockOptional()).isEmpty
+	}
+
+	@Test
+	fun givenNoChannelStoreFlag_onChannelUpdate_doNotCreateChannel() {
+		val channelId = generateUniqueSnowflakeId()
+		val channelUpdate = ChannelUpdate.builder().channel(channel(channelId).name("Alpha Quadrant").build())
+		assertThat(noopUpdater.onChannelUpdate(0, channelUpdate.build()).blockOptional()).isEmpty
+
+		assertThat(accessor.getChannelById(channelId).blockOptional()).isEmpty
+	}
+
+	@Test
+	fun givenNoChannelStoreFlag_onChannelUpdate_doNotUpdateChannel() {
+		val channelId = generateUniqueSnowflakeId()
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).name("Alpha Quadrant").build())
+		updater.onChannelCreate(0, channelCreate.build()).block()
+
+		var alphaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(alphaChannel.name().isAbsent).isFalse
+		assertThat(alphaChannel.name().get()).isEqualTo("Alpha Quadrant")
+
+		val channelUpdate = ChannelUpdate.builder().channel(channel(channelId).name("Delta Quadrant").build())
+		assertThat(noopUpdater.onChannelUpdate(0, channelUpdate.build()).blockOptional()).isEmpty
+
+		alphaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(alphaChannel.name().isAbsent).isFalse
+		assertThat(alphaChannel.name().get()).isEqualTo("Alpha Quadrant")
+	}
+
+	@Test
+	fun givenNoChannelStoreFlag_onChannelDelete_doNoDeleteChannel() {
+		val channelId = generateUniqueSnowflakeId()
+		val channelCreate = ChannelCreate.builder().channel(channel(channelId).name("Alpha Quadrant").build())
+		updater.onChannelCreate(0, channelCreate.build()).block()
+
+		var alphaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(alphaChannel.name().isAbsent).isFalse
+		assertThat(alphaChannel.name().get()).isEqualTo("Alpha Quadrant")
+
+		val channelDelete = ChannelDelete.builder().channel(channel(channelId).build())
+		assertThat(noopUpdater.onChannelDelete(0, channelDelete.build()).blockOptional()).isEmpty
+
+		alphaChannel = accessor.getChannelById(channelId).block()!!
+		assertThat(alphaChannel.name().isAbsent).isFalse
+		assertThat(alphaChannel.name().get()).isEqualTo("Alpha Quadrant")
 	}
 }

@@ -32,7 +32,10 @@ import java.util.EnumSet
  * Ids have to saved as TEXT, because JSONB does not support deleting numeric array entries (easily)
  *
  */
-class PostgresStoreLayout(connectionFactory: ConnectionFactory, storeFlags: EnumSet<StoreFlag> = StoreFlag.all) : StoreLayout {
+class PostgresStoreLayout(
+	connectionFactory: ConnectionFactory,
+	storeFlags: EnumSet<StoreFlag> = StoreFlag.all(),
+) : StoreLayout {
 
 	private val serde: PostgresSerde = JacksonJsonSerde(Serde.objectMapper())
 

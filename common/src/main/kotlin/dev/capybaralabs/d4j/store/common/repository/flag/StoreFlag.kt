@@ -19,10 +19,14 @@ enum class StoreFlag {
 	;
 
 	companion object {
-		val all: EnumSet<StoreFlag>
-			get() = EnumSet.allOf(StoreFlag::class.java)
+		fun all(): EnumSet<StoreFlag> = EnumSet.allOf(StoreFlag::class.java)
 
-		val none: EnumSet<StoreFlag>
-			get() = EnumSet.noneOf(StoreFlag::class.java)
+		fun none(): EnumSet<StoreFlag> = EnumSet.noneOf(StoreFlag::class.java)
+
+		fun allBut(storeFlag: StoreFlag): EnumSet<StoreFlag> {
+			val result = all()
+			result.remove(storeFlag)
+			return result
+		}
 	}
 }

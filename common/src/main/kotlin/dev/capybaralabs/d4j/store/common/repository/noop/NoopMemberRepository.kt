@@ -15,23 +15,23 @@ class NoopMemberRepository : MemberRepository {
 	}
 
 	override fun deleteById(guildId: Long, userId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countMembers(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countMembersInGuild(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getMembers(): Flux<MemberData> {

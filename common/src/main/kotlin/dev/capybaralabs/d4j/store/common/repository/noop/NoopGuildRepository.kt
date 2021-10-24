@@ -15,15 +15,15 @@ class NoopGuildRepository : GuildRepository {
 	}
 
 	override fun delete(guildId: Long): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun deleteByShardId(shardId: Int): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun countGuilds(): Mono<Long> {
-		return Mono.empty()
+		return Mono.just(0)
 	}
 
 	override fun getGuildById(guildId: Long): Mono<GuildData> {

@@ -22,7 +22,7 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory
 
 class RedisStoreLayout(
 	connectionFactory: ReactiveRedisConnectionFactory,
-	storeFlags: EnumSet<StoreFlag> = StoreFlag.all,
+	storeFlags: EnumSet<StoreFlag> = StoreFlag.all(),
 	prefix: String = "d4j_capy",
 ) : StoreLayout {
 
