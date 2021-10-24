@@ -23,9 +23,9 @@ enum class StoreFlag {
 
 		fun none(): EnumSet<StoreFlag> = EnumSet.noneOf(StoreFlag::class.java)
 
-		fun allBut(storeFlag: StoreFlag): EnumSet<StoreFlag> {
+		fun allBut(vararg storeFlags: StoreFlag): EnumSet<StoreFlag> {
 			val result = all()
-			result.remove(storeFlag)
+			result.removeAll(storeFlags.asList())
 			return result
 		}
 	}
