@@ -44,6 +44,7 @@ import discord4j.discordjson.json.gateway.Ready
 import discord4j.discordjson.json.gateway.UserUpdate
 import discord4j.discordjson.json.gateway.VoiceStateUpdateDispatch
 import discord4j.discordjson.possible.Possible
+import java.time.Duration
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -52,6 +53,7 @@ import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Sinks
+import reactor.core.scheduler.Schedulers
 import reactor.util.function.Tuple2
 import reactor.util.function.Tuples
 
@@ -129,19 +131,44 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	}
 
 
-	private val batchers: MutableMap<Int, Batcher<GuildCreate>> = ConcurrentHashMap()
+	private val batchers = ConcurrentHashMap<Int, Sinks.Many<Tuple2<GuildCreate, Sinks.Empty<Void>>>>()
 
 	override fun onGuildCreate(shardId: Int, dispatch: GuildCreate): Mono<Void> {
 		val completeSink = Sinks.empty<Void>()
-		batchers.compute(shardId) { _, value ->
-			val batcher = value ?: Batcher(shardId) { onGuildCreateBatch(shardId, it) }
-			batcher.queue(Tuples.of(dispatch, completeSink))
-			batcher
-		}
+		batchers
+			.computeIfAbsent(shardId) { createBatcher(it) }
+			.emitNext(Tuples.of(dispatch, completeSink), retryAlways)
 		return completeSink.asMono()
 	}
 
-	private fun onGuildCreateBatch(shardId: Int, batch: List<Tuple2<GuildCreate, Sinks.Empty<Void>>>) {
+	private val batchSize = 256 // TODO tune
+	private val batchPeriod = Duration.ofSeconds(1) // TODO tune
+
+	private val retryAlways: Sinks.EmitFailureHandler = Sinks.EmitFailureHandler { _, _ ->
+		LockSupport.parkNanos(10)
+		true
+	}
+
+	private fun createBatcher(shardId: Int): Sinks.Many<Tuple2<GuildCreate, Sinks.Empty<Void>>> {
+		val batcher = Sinks.many().unicast()
+			.onBackpressureBuffer<Tuple2<GuildCreate, Sinks.Empty<Void>>>()
+
+		batcher.asFlux()
+			.bufferTimeout(batchSize, batchPeriod, Schedulers.newSingle("batcher-shard-$shardId"))
+			.flatMap { batch ->
+				val sinks = batch.map { it.t2 }
+				log.debug("Batch on shard $shardId executing with ${batch.size} elements")
+				onGuildCreateBatch(shardId, batch)
+					.doOnSuccess { sinks.forEach { it.emitEmpty(retryAlways) } }
+					.doOnError { error -> sinks.forEach { it.emitError(error, retryAlways) } }
+					.onErrorResume { Mono.empty() }
+			}
+			.subscribe() // TODO dispose?
+
+		return batcher
+	}
+
+	private fun onGuildCreateBatch(shardId: Int, batch: List<Tuple2<GuildCreate, Sinks.Empty<Void>>>): Mono<Void> {
 		val guildCreateDatas = batch.map { it.t1.guild() }
 		val guildDatas = guildCreateDatas
 			.map { guildCreateData ->
@@ -208,12 +235,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			}
 			.let { repos.voiceStates.saveAll(it, shardId) }
 
-		val sinks = batch.map { it.t2 }
-		val retryAlways: Sinks.EmitFailureHandler = Sinks.EmitFailureHandler { _, _ ->
-			LockSupport.parkNanos(10)
-			true
-		}
-		saveGuilds
+		return saveGuilds
 			.and(saveChannels)
 			.and(saveEmojis)
 			.and(saveMembers)
@@ -221,9 +243,6 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.and(saveRoles)
 			.and(saveUsers)
 			.and(saveVoiceStates)
-			.doOnSuccess { sinks.forEach { it.emitEmpty(retryAlways) } }
-			.doOnError { error -> sinks.forEach { it.emitError(error, retryAlways) } }
-			.subscribe()
 	}
 
 	private fun createOfflinePresence(member: MemberData): PresenceData {

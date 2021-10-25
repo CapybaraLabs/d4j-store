@@ -50,7 +50,7 @@ internal fun <T> instrumented(flux: Flux<T>, operation: String): Flux<T> {
 }
 
 
-private val log = LoggerFactory.getLogger("dev.capybaralabs.d4j.store.postgres.PostgreStoreExtensions")
+private val log = LoggerFactory.getLogger("dev.capybaralabs.d4j.store.postgres.PostgresStoreExtensions")
 private const val NANOSECONDS_PER_MILLISECOND = 1000000.0
 
 private fun doInstrument(startTime: Long, operation: String) {
