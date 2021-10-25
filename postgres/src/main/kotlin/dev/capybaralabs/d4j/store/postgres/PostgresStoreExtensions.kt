@@ -16,51 +16,56 @@ import reactor.kotlin.core.publisher.toMono
 /**
  * Run a closure returning a Mono in the a scope of a database connection, handling the lifecycle (closing the connection)
  */
-internal fun <T> withConnection(factory: ConnectionFactory, operation: String, closure: (Connection) -> Mono<T>): Mono<T> {
+internal fun <T> withConnection(factory: ConnectionFactory, operation: String, count: Int = 1, closure: (Connection) -> Mono<T>): Mono<T> {
 	return instrumented(Mono.usingWhen(
 		factory.create(),
 		{ closure.invoke(it) },
 		{ it.close() }
-	), operation)
+	), operation, count)
 }
 
 /**
  * Run a closure returning a Flux in the a scope of a database connection, handling the lifecycle (closing the connection)
  */
-internal fun <T> withConnectionMany(factory: ConnectionFactory, operation: String, closure: (Connection) -> Flux<T>): Flux<T> {
+internal fun <T> withConnectionMany(
+	factory: ConnectionFactory,
+	operation: String,
+	count: Int = 1,
+	closure: (Connection) -> Flux<T>
+): Flux<T> {
 	return instrumented(Flux.usingWhen(
 		factory.create(),
 		{ closure.invoke(it) },
 		{ it.close() }
-	), operation)
+	), operation, count)
 }
 
-internal fun <T> instrumented(mono: Mono<T>, operation: String): Mono<T> {
+internal fun <T> instrumented(mono: Mono<T>, operation: String, count: Int): Mono<T> {
 	val subscribeTimeHolder = AtomicLong()
 	return mono
 		.doOnSubscribe { subscribeTimeHolder.set(System.nanoTime()) }
-		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation) }
+		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation, count) }
 }
 
-internal fun <T> instrumented(flux: Flux<T>, operation: String): Flux<T> {
+internal fun <T> instrumented(flux: Flux<T>, operation: String, count: Int): Flux<T> {
 	val subscribeTimeHolder = AtomicLong()
 	return flux
 		.doOnSubscribe { subscribeTimeHolder.set(System.nanoTime()) }
-		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation) }
+		.doOnTerminate { doInstrument(subscribeTimeHolder.get(), operation, count) }
 }
 
 
 private val log = LoggerFactory.getLogger("dev.capybaralabs.d4j.store.postgres.PostgresStoreExtensions")
 private const val NANOSECONDS_PER_MILLISECOND = 1000000.0
 
-private fun doInstrument(startTime: Long, operation: String) {
+private fun doInstrument(startTime: Long, operation: String, count: Int) {
 	if (startTime == 0L) {
 		log.warn("No subscribe time present for operation {}", operation)
 		return
 	}
 	val nanos = System.nanoTime() - startTime
 	val millis: Double = nanos / NANOSECONDS_PER_MILLISECOND
-	log.trace("{} took {}ms", operation, millis)
+	log.trace("{} took {}ms for {} elements", operation, millis, count)
 }
 
 

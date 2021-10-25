@@ -45,7 +45,7 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 			return Mono.empty()
 		}
 		return Mono.defer {
-			withConnection(factory, "PostgresGuildRepository.saveAll") { connection ->
+			withConnection(factory, "PostgresGuildRepository.saveAll", guilds.size) { connection ->
 				val statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_guild VALUES ($1, $2, $3)

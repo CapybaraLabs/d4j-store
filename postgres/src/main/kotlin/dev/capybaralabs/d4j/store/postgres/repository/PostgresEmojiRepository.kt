@@ -50,7 +50,7 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresEmojiRepository.saveAll") {
+			withConnection(factory, "PostgresEmojiRepository.saveAll", filtered.sumOf { it.second.size }) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_emoji VALUES ($1, $2, $3, $4)
