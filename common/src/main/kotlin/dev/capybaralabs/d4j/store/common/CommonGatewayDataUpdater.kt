@@ -132,6 +132,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 
 
 	private val batchers = ConcurrentHashMap<Int, Sinks.Many<Tuple2<GuildCreate, Sinks.Empty<Void>>>>()
+	private val batcherTimer = Schedulers.newBoundedElastic(100, Integer.MAX_VALUE, "batcher-timer")
 
 	override fun onGuildCreate(shardId: Int, dispatch: GuildCreate): Mono<Void> {
 		val completeSink = Sinks.empty<Void>()
@@ -154,7 +155,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.onBackpressureBuffer<Tuple2<GuildCreate, Sinks.Empty<Void>>>()
 
 		batcher.asFlux()
-			.bufferTimeout(batchSize, batchPeriod, Schedulers.newSingle("batcher-shard-$shardId"))
+			.bufferTimeout(batchSize, batchPeriod, batcherTimer)
 			.flatMap { batch ->
 				val sinks = batch.map { it.t2 }
 				log.debug("Batch on shard $shardId executing with ${batch.size} elements")
