@@ -382,6 +382,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val deleteMember = repos.members.deleteById(guildId, userId)
 		val deletePresence = repos.presences.deleteById(guildId, userId)
 
+		// TODO: this unexpectedly deletes the user when the MemberRepo is noop
 		val deleteOrphanUser = repos.members.getMembersByUserId(userId)
 			.filter { it.first != guildId }
 			.hasElements() // short circuit keeps this a low impact call
