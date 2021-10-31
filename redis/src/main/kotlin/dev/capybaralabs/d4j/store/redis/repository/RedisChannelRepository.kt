@@ -1,20 +1,14 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
-import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), ChannelRepository {
-
-	companion object {
-		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
-	}
 
 	private val channelKey = key("channel")
 	private val channelOps = RedisHashOps(channelKey, factory, Long::class.java, ChannelData::class.java)
