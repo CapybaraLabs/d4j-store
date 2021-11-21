@@ -1,6 +1,5 @@
 package dev.capybaralabs.d4j.store.tck
 
-import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.gateway.ChannelCreate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.json.gateway.MessageDelete
@@ -9,8 +8,9 @@ import discord4j.discordjson.json.gateway.MessageUpdate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class MessageTest(storeLayout: StoreLayout) {
+internal class MessageTest(storeLayoutProvider: StoreLayoutProvider) {
 
+	private val storeLayout = storeLayoutProvider.defaultLayout()
 	private val accessor = storeLayout.dataAccessor
 	private val updater = storeLayout.gatewayDataUpdater
 

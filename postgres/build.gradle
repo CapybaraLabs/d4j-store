@@ -1,7 +1,7 @@
 dependencies {
 	api "io.r2dbc:r2dbc-postgresql"
 	api "io.r2dbc:r2dbc-pool"
-	implementation project(":common")
+	api project(":common")
 
 	testImplementation project(":tck")
 	testImplementation "org.testcontainers:postgresql"

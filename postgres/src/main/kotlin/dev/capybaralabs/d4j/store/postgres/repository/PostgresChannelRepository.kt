@@ -48,7 +48,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 			return Mono.empty()
 		}
 		return Mono.defer {
-			withConnection(factory, "PostgresChannelRepository.saveAll") { connection ->
+			withConnection(factory, "PostgresChannelRepository.saveAll", channels.size) { connection ->
 				var statement = connection.createStatement(
 					"""
 					INSERT INTO d4j_discord_channel VALUES ($1, $2, $3, $4)

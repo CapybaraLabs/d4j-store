@@ -50,7 +50,7 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresMemberRepository.saveAll") {
+			withConnection(factory, "PostgresMemberRepository.saveAll", filtered.map { it.value.size }.sum()) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_member VALUES ($1, $2, $3, $4)

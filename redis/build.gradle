@@ -1,6 +1,6 @@
 dependencies {
 	api "org.springframework.data:spring-data-redis"
-	implementation project(":common")
+	api project(":common")
 
 	testImplementation project(":tck")
 	testImplementation "org.testcontainers:testcontainers"

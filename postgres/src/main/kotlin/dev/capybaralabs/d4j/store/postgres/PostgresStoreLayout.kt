@@ -3,6 +3,8 @@ package dev.capybaralabs.d4j.store.postgres
 import dev.capybaralabs.d4j.store.common.CommonDataAccessor
 import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.Serde
+import dev.capybaralabs.d4j.store.common.repository.flag.FlaggedRepositories
+import dev.capybaralabs.d4j.store.common.repository.flag.StoreFlag
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresChannelRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresEmojiRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresGuildRepository
@@ -17,6 +19,7 @@ import discord4j.common.store.api.layout.DataAccessor
 import discord4j.common.store.api.layout.GatewayDataUpdater
 import discord4j.common.store.api.layout.StoreLayout
 import io.r2dbc.spi.ConnectionFactory
+import java.util.EnumSet
 
 /**
  * TODO
@@ -29,23 +32,28 @@ import io.r2dbc.spi.ConnectionFactory
  * Ids have to saved as TEXT, because JSONB does not support deleting numeric array entries (easily)
  *
  */
-class PostgresStoreLayout(connectionFactory: ConnectionFactory) : StoreLayout {
+class PostgresStoreLayout(
+	connectionFactory: ConnectionFactory,
+	storeFlags: EnumSet<StoreFlag> = StoreFlag.all(),
+) : StoreLayout {
 
 	private val serde: PostgresSerde = JacksonJsonSerde(Serde.objectMapper())
 
 	// TODO implement versioning / migrations
 	// TODO avoid blocking calls (db creations) in constructor?
-	private val repositories = PostgresRepositories(
-		connectionFactory,
-		PostgresChannelRepository(connectionFactory, serde),
-		PostgresEmojiRepository(connectionFactory, serde),
-		PostgresGuildRepository(connectionFactory, serde),
-		PostgresMemberRepository(connectionFactory, serde),
-		PostgresMessageRepository(connectionFactory, serde),
-		PostgresPresenceRepository(connectionFactory, serde),
-		PostgresRoleRepository(connectionFactory, serde),
-		PostgresUserRepository(connectionFactory, serde),
-		PostgresVoiceStateRepository(connectionFactory, serde),
+	private val repositories = FlaggedRepositories(
+		storeFlags, PostgresRepositories(
+			connectionFactory,
+			PostgresChannelRepository(connectionFactory, serde),
+			PostgresEmojiRepository(connectionFactory, serde),
+			PostgresGuildRepository(connectionFactory, serde),
+			PostgresMemberRepository(connectionFactory, serde),
+			PostgresMessageRepository(connectionFactory, serde),
+			PostgresPresenceRepository(connectionFactory, serde),
+			PostgresRoleRepository(connectionFactory, serde),
+			PostgresUserRepository(connectionFactory, serde),
+			PostgresVoiceStateRepository(connectionFactory, serde),
+		)
 	)
 
 	private val postgresDataAccessor: CommonDataAccessor = CommonDataAccessor(repositories)

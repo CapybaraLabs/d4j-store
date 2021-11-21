@@ -1,6 +1,5 @@
 package dev.capybaralabs.d4j.store.tck
 
-import discord4j.common.store.api.layout.StoreLayout
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.gateway.PresenceUpdate
@@ -8,8 +7,9 @@ import discord4j.discordjson.json.gateway.UserUpdate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-internal class PresenceTest(storeLayout: StoreLayout) {
+internal class PresenceTest(storeLayoutProvider: StoreLayoutProvider) {
 
+	private val storeLayout = storeLayoutProvider.defaultLayout()
 	private val accessor = storeLayout.dataAccessor
 	private val updater = storeLayout.gatewayDataUpdater
 

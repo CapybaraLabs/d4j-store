@@ -50,7 +50,7 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresVoiceStateRepository.saveAll") {
+			withConnection(factory, "PostgresVoiceStateRepository.saveAll", voiceStatesInChannels.size) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_voice_state VALUES ($1, $2, $3, $4, $5)

@@ -48,7 +48,7 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresPresenceRepository.saveAll") {
+			withConnection(factory, "PostgresPresenceRepository.saveAll", filtered.map { it.value.size }.sum()) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_presence VALUES ($1, $2, $3, $4)

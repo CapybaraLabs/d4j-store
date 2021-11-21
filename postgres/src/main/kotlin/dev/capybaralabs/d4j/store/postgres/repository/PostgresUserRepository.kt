@@ -46,7 +46,7 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresUserRepository.saveAll") {
+			withConnection(factory, "PostgresUserRepository.saveAll", users.size) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_user VALUES ($1, $2)

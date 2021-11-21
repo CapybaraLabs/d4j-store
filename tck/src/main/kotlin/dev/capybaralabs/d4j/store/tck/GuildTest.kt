@@ -1,6 +1,6 @@
 package dev.capybaralabs.d4j.store.tck
 
-import discord4j.common.store.api.layout.StoreLayout
+import dev.capybaralabs.d4j.store.common.repository.flag.StoreFlag
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildUpdate
@@ -10,8 +10,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 
-internal class GuildTest(storeLayout: StoreLayout) {
+internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 
+	private val storeLayout = storeLayoutProvider.defaultLayout()
 	private val accessor = storeLayout.dataAccessor
 	private val updater = storeLayout.gatewayDataUpdater
 
@@ -730,11 +731,7 @@ internal class GuildTest(storeLayout: StoreLayout) {
 	fun onGuildUpdate_updateGuild() {
 		val guildId = generateUniqueSnowflakeId()
 		val guildCreate = GuildCreate.builder()
-			.guild(
-				guild(guildId)
-					.name("Deep Space 9")
-					.build()
-			)
+			.guild(guild(guildId).name("Deep Space 9").build())
 			.build()
 
 		updater.onGuildCreate(0, guildCreate).block()
@@ -805,4 +802,95 @@ internal class GuildTest(storeLayout: StoreLayout) {
 			.anyMatch { it.user().id().asLong() == userIdA }
 			.anyMatch { it.user().id().asLong() == userIdB }
 	}
+
+
+	private val noop = storeLayoutProvider.withFlags(StoreFlag.allBut(StoreFlag.GUILD))
+	private val noopAccessor = noop.dataAccessor
+	private val noopUpdater = noop.gatewayDataUpdater
+
+	@Test
+	fun givenNoGuildStoreFlag_countIsZero() {
+		// TODO delete
+		// TODO delete shard
+		assertThat(noopAccessor.countGuilds().block()!!).isZero
+	}
+
+	@Test
+	fun givenNoGuildStoreFlag_guildsIsEmpty() {
+		assertThat(noopAccessor.guilds.collectList().block()).isEmpty()
+	}
+
+	@Test
+	fun givenNoGuildStoreFlag_onGuildCreate_doNotCreateGuild() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).build())
+			.build()
+
+		assertThat(noopUpdater.onGuildCreate(0, guildCreate).blockOptional()).isEmpty
+
+		assertThat(accessor.getGuildById(guildId).blockOptional()).isEmpty
+		assertThat(accessor.guilds.collectList().block())
+			.noneMatch { it.id().asLong() == guildId }
+	}
+
+	@Test
+	fun givenNoGuildStoreFlag_onGuildDelete_doNotDeleteGuild() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).build())
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getGuildById(guildId).block()).isNotNull
+		assertThat(accessor.guilds.collectList().block()).anyMatch { it.id().asLong() == guildId }
+
+		assertThat(noopUpdater.onGuildDelete(0, guildDelete(guildId)).blockOptional()).isEmpty
+
+		assertThat(accessor.getGuildById(guildId).block()).isNotNull
+		assertThat(accessor.guilds.collectList().block()).anyMatch { it.id().asLong() == guildId }
+	}
+
+	@Test
+	fun givenNoGuildStoreFlagAndGuildNotExists_onGuildUpdate_doNotCreateGuild() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildUpdate = GuildUpdate.builder()
+			.guild(guildUpdate(guildId).build())
+			.build()
+		assertThat(noopUpdater.onGuildUpdate(0, guildUpdate).blockOptional()).isEmpty
+
+		assertThat(accessor.getGuildById(guildId).block()).isNull()
+		assertThat(accessor.guilds.collectList().block())
+			.noneMatch { it.id().asLong() == guildId }
+	}
+
+	@Test
+	fun givenNoGuildStoreFlag_onGuildUpdate_doNotUpdateGuild() {
+		val guildId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).name("Deep Space 9").build())
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.matches { it.name() == "Deep Space 9" }
+
+		val guildUpdate = GuildUpdate.builder()
+			.guild(guildUpdate(guildId).build())
+			.build()
+
+
+		assertThat(noopUpdater.onGuildUpdate(0, guildUpdate).blockOptional()).isEmpty
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.matches { it.name() == "Deep Space 9" }
+	}
+
+
+	// TODO combined tests across other entities
+
 }

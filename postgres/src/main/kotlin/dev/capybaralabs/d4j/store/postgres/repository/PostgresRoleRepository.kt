@@ -47,7 +47,7 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 		}
 
 		return Mono.defer {
-			withConnection(factory, "PostgresRoleRepository.saveAll") {
+			withConnection(factory, "PostgresRoleRepository.saveAll", filtered.map { it.value.size }.sum()) {
 				val statement = it.createStatement(
 					"""
 					INSERT INTO d4j_discord_role VALUES ($1, $2, $3, $4)
