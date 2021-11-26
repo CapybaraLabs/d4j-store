@@ -47,6 +47,7 @@ import discord4j.discordjson.possible.Possible
 import java.time.Duration
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.LockSupport
 import org.slf4j.LoggerFactory
@@ -54,6 +55,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Sinks
 import reactor.core.scheduler.Schedulers
+import reactor.util.concurrent.Queues
 import reactor.util.function.Tuple2
 import reactor.util.function.Tuples
 
@@ -142,9 +144,11 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		return completeSink.asMono()
 	}
 
-	private val batchSize = 256 // TODO tune
-	private val batchPeriod = Duration.ofSeconds(1) // TODO tune
-
+	// Enough to buffer all guilds on a shard. Also irrelevant at the moment due to the delayed completion of the individual Monos which
+	// causes the D4J dispatcher to choke on our batcher a bit and fill up its own backpressure queue of 256
+	private val batchBackpressureQueueSize = 3_000
+	private val batchPeriod = Duration.ofMillis(100)
+	private val batchConcurrency = 1
 	private val retryAlways: Sinks.EmitFailureHandler = Sinks.EmitFailureHandler { _, _ ->
 		LockSupport.parkNanos(10)
 		true
@@ -152,10 +156,24 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 
 	private fun createBatcher(shardId: Int): Sinks.Many<Tuple2<GuildCreate, Sinks.Empty<Void>>> {
 		val batcher = Sinks.many().unicast()
-			.onBackpressureBuffer<Tuple2<GuildCreate, Sinks.Empty<Void>>>()
+			.onBackpressureBuffer(Queues.unbounded<Tuple2<GuildCreate, Sinks.Empty<Void>>>(batchBackpressureQueueSize).get())
+		val batchSignals = Sinks.many().unicast()
+			.onBackpressureBuffer<Any>()
+
+		val tickets = AtomicInteger(batchConcurrency)
+
+		Flux.interval(batchPeriod, batcherTimer)
+			.doOnNext { batchSignals.emitNext(true, retryAlways) }
+			.retry()
+			.subscribe() // TODO dispose?
 
 		batcher.asFlux()
-			.bufferTimeout(batchSize, batchPeriod, batcherTimer)
+			.doOnNext { batchSignals.emitNext(true, retryAlways) }
+			.buffer(batchSignals.asFlux()
+				.subscribeOn(batcherTimer)
+				.filter { tickets.get() > 0 }
+			)
+			.doOnNext { tickets.decrementAndGet() }
 			.flatMap { batch ->
 				val sinks = batch.map { it.t2 }
 				log.debug("Batch on shard $shardId executing with ${batch.size} elements")
@@ -163,6 +181,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.doOnSuccess { sinks.forEach { it.emitEmpty(retryAlways) } }
 					.doOnError { error -> sinks.forEach { it.emitError(error, retryAlways) } }
 					.onErrorResume { Mono.empty() }
+					.doFinally {
+						tickets.incrementAndGet()
+						batchSignals.emitNext(true, retryAlways)
+					}
 			}
 			.subscribe() // TODO dispose?
 
