@@ -89,6 +89,7 @@ sonarqube {
 	properties {
 		property "sonar.projectKey", "dev.capybaralabs.d4j.store.postgres:d4j-postgres-store"
 		property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
+		property "sonar.coverage.exclusions", "tck/**/*"
 	}
 }
 
