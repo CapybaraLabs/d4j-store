@@ -19,7 +19,7 @@
    ```kotlin
        class MyStoreTck : StoreTck
    ```
-   [Example file](../src/test/kotlin/dev/capybaralabs/d4j/store/postgres/PostgresStoreTck.kt#L23)
+   [Example file](../postgres/src/test/kotlin/dev/capybaralabs/d4j/store/postgres/PostgresStoreTck.kt#L23)
 
 4. Implement a `StoreLayoutResolver` extension
    ```kotlin
@@ -31,7 +31,7 @@
 
        }
    ```
-   [Example file](../src/test/kotlin/dev/capybaralabs/d4j/store/postgres/PostgresStoreTck.kt#L26)
+   [Example file](../postgres/src/test/kotlin/dev/capybaralabs/d4j/store/postgres/PostgresStoreTck.kt#L26)
 
 5. Register the extension
 
@@ -40,4 +40,4 @@
    ```
        org.example.foo.MyStoreLayoutResolver
    ```
-   [Example file](../src/test/resources/META-INF/services/org.junit.jupiter.api.extension.Extension)
+   [Example file](../postgres/src/test/resources/META-INF/services/org.junit.jupiter.api.extension.Extension)
