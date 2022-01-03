@@ -6,13 +6,15 @@ javaPlatform {
 	allowDependencies()
 }
 dependencies {
-	api platform("org.jetbrains.kotlin:kotlin-bom:1.5.31")
-	api platform("org.springframework.boot:spring-boot-dependencies:2.5.5")
-	api platform("org.testcontainers:testcontainers-bom:1.16.0")
-	api platform("org.junit:junit-bom:5.8.1")
+	api platform("org.jetbrains.kotlin:kotlin-bom:1.6.10")
+	api platform("org.springframework.boot:spring-boot-dependencies:2.6.2")
+	api platform("org.testcontainers:testcontainers-bom:1.16.2")
+	api platform("org.junit:junit-bom:5.8.2")
 	constraints {
-		api "com.discord4j:discord4j-core:3.2.0"
+		api "com.discord4j:discord4j-core:3.2.1"
 		api "io.r2dbc:r2dbc-postgresql:0.8.10.RELEASE"
 		api "io.r2dbc:r2dbc-pool:0.8.7.RELEASE"
+		// 3.21.0 needs Kotlin 1.6.20, see https://github.com/assertj/assertj-core/issues/2357#issuecomment-976114407
+		api("org.assertj:assertj-core") { version { strictly "3.20.0" } }
 	}
 }
