@@ -68,6 +68,7 @@ class RedisFactory(private val connectionFactory: ReactiveRedisConnectionFactory
 
 	private fun <T> serializer(clazz: Class<T>): RedisSerializer<T> {
 		return if (clazz == String::class.java) {
+			@Suppress("UNCHECKED_CAST")
 			StringRedisSerializer() as RedisSerializer<T>
 		} else {
 			val serializer = Jackson2JsonRedisSerializer(clazz)
