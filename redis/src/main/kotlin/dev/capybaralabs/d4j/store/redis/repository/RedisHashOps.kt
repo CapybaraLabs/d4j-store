@@ -44,6 +44,8 @@ class RedisHashOps<HK, HV>(private val key: String, factory: RedisFactory, hkCla
 			return Mono.empty()
 		}
 		return ops.multiGet(key, hashKeys)
+			// returned values are nullable, see https://redis.io/commands/hmget
+			.map { it.filterNotNull() }
 	}
 
 	fun scan(options: ScanOptions): Flux<Map.Entry<HK, HV>> {
