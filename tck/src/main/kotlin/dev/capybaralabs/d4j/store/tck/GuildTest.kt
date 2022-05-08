@@ -835,6 +835,55 @@ internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 	}
 
 	@Test
+	fun onGuildUpdate_updateRoles() {
+		val guildId = generateUniqueSnowflakeId()
+		val roleIdA = generateUniqueSnowflakeId()
+		val roleIdB = generateUniqueSnowflakeId()
+
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId).addRoles(
+					role(roleIdA).build(),
+					role(roleIdB).build(),
+				).build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.extractingList { it.roles() }
+			.hasSize(2)
+			.anyMatch { it.asLong() == roleIdA }
+			.anyMatch { it.asLong() == roleIdB }
+
+
+		val roleIdC = generateUniqueSnowflakeId()
+		val guildUpdate = GuildUpdate.builder()
+			.guild(
+				guildUpdate(guildId)
+					.addRoles(
+						role(roleIdB).build(),
+						role(roleIdC).build(),
+					)
+					.build()
+			)
+			.build()
+
+
+		updater.onGuildUpdate(0, guildUpdate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.extractingList { it.roles() }
+			.hasSize(2)
+			.anyMatch { it.asLong() == roleIdB }
+			.anyMatch { it.asLong() == roleIdC }
+	}
+
+
+	@Test
 	fun onGuildUpdate_updateStickers() {
 		val guildId = generateUniqueSnowflakeId()
 		val stickerIdA = generateUniqueSnowflakeId()
