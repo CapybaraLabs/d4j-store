@@ -37,8 +37,8 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 					.map { guildIndex.addElements(it.key, *it.value.map { ch -> ch.id().asLong() }.toTypedArray()) }
 			).flatMap { it }
 
-			val guilIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
+			val guildIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, guildIds)
 
 			val saveChannels = channelOps.putAll(channels.associateBy { it.id().asLong() })
 

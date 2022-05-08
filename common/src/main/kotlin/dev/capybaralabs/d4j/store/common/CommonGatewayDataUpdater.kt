@@ -15,6 +15,7 @@ import discord4j.discordjson.json.PartialUserData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.ReactionData
 import discord4j.discordjson.json.RoleData
+import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
 import discord4j.discordjson.json.gateway.ChannelCreate
@@ -30,6 +31,7 @@ import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildRoleCreate
 import discord4j.discordjson.json.gateway.GuildRoleDelete
 import discord4j.discordjson.json.gateway.GuildRoleUpdate
+import discord4j.discordjson.json.gateway.GuildStickersUpdate
 import discord4j.discordjson.json.gateway.GuildUpdate
 import discord4j.discordjson.json.gateway.MessageCreate
 import discord4j.discordjson.json.gateway.MessageDelete
@@ -201,6 +203,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.emojis(guildCreateData.emojis().map { it.id() }.filter { it.isPresent }.map { it.get() })
 					.members(guildCreateData.members().map { it.user().id() }.distinct())
 					.channels(guildCreateData.channels().map { it.id() })
+					.stickers(guildCreateData.stickersOrEmpty().map { it.id() })
 					.build()
 			}
 
@@ -251,6 +254,15 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.let { repos.roles.saveAll(it, shardId) }
 		val saveUsers = guildCreateDatas.flatMap { it.members() }.map { it.user() }.let { repos.users.saveAll(it) }
 
+		val saveStickers = guildCreateDatas.flatMap { guildCreateData ->
+			guildCreateData.stickersOrEmpty().map { stickerData ->
+				StickerData.builder()
+					.from(stickerData)
+					.guildId(guildCreateData.id().asLong())
+					.build()
+			}
+		}.let { repos.stickers.saveAll(it, shardId) }
+
 		val saveVoiceStates = guildCreateDatas
 			.flatMap { guild ->
 				guild.voiceStates()
@@ -264,6 +276,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.and(saveMembers)
 			.and(savePresences/*.then(saveOfflinePresences)*/)
 			.and(saveRoles)
+			.and(saveStickers)
 			.and(saveUsers)
 			.and(saveVoiceStates)
 	}
@@ -310,16 +323,63 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				// TODO delete no longer visible users
 				val deleteVoiceStates = repos.voiceStates.deleteByGuildId(guildId)
 				val deletePresences = repos.presences.deleteByGuildId(guildId)
+				val deleteStickers = repos.stickers.deleteByGuildId(guildId)
 				deleteChannels
 					.and(deleteEmojis)
 					.and(deleteMembers)
 					.and(deleteMessages)
 					.and(deletePresences)
 					.and(deleteRoles)
+					.and(deleteStickers)
 					.and(deleteVoiceStates)
 					.thenReturn(guild)
 			}
 			.flatMap { repos.guilds.delete(guildId).thenReturn(it) }
+	}
+
+	override fun onGuildStickersUpdate(shardId: Int, dispatch: GuildStickersUpdate): Mono<Set<StickerData>> {
+		val guildId = dispatch.guildId().asLong()
+
+		// TODO granular updates, loading the object and saving it back is suboptimal?
+
+		val stickers = dispatch.stickers()
+			.map {
+				StickerData.builder()
+					.from(it)
+					.guildId(guildId)
+					.build()
+			}
+
+		val updateGuild: (GuildData) -> Mono<Void> = { oldGuild: GuildData ->
+			val updated = GuildData.builder()
+				.from(oldGuild)
+				.stickers(stickers.mapNotNull { it.id() })
+				.build()
+			repos.guilds.save(updated, shardId)
+		}
+
+		val deleteStickers: (GuildData) -> Mono<Long> = { oldGuild: GuildData ->
+			// delete those stickers that are in the old guild but not the dispatch
+			val toDelete = oldGuild.stickersOrEmpty()
+				.filter { id -> stickers.none { sticker -> sticker.id() == id } }
+				.map { it.asLong() }
+			repos.stickers.deleteByIds(toDelete, guildId)
+		}
+
+		val saveStickers = repos.stickers.saveAll(stickers, shardId)
+
+		return repos.guilds.getGuildById(guildId)
+			.flatMapMany { guild ->
+				updateGuild.invoke(guild)
+					.and(deleteStickers.invoke(guild))
+					.and(saveStickers)
+					.thenMany(
+						Flux.fromIterable(guild.stickersOrEmpty())
+							.map { it.asLong() }
+							.flatMap { repos.stickers.getStickerById(guild.id().asLong(), it) } // TODO bulk operation
+					)
+			}
+			.collectList().map { it.toSet() }
 	}
 
 	override fun onGuildEmojisUpdate(shardId: Int, dispatch: GuildEmojisUpdate): Mono<Set<EmojiData>> {
@@ -585,6 +645,8 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.doOnNext { log.debug("Invalidated $it presences on shard $shardId") }
 		val deleteRoles = repos.roles.deleteByShardId(shardId)
 			.doOnNext { log.debug("Invalidated $it roles on shard $shardId") }
+		val deleteStickers = repos.stickers.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it stickers on shard $shardId") }
 		val deleteVoiceStates = repos.voiceStates.deleteByShardId(shardId)
 			.doOnNext { log.debug("Invalidated $it voice states on shard $shardId") }
 
@@ -597,6 +659,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			deleteMessages,
 			deletePresenses,
 			deleteRoles,
+			deleteStickers,
 			deleteVoiceStates
 		)
 	}

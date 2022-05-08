@@ -16,6 +16,7 @@ import discord4j.discordjson.json.ImmutablePartialMessageData
 import discord4j.discordjson.json.ImmutablePartialUserData
 import discord4j.discordjson.json.ImmutablePresenceData
 import discord4j.discordjson.json.ImmutableRoleData
+import discord4j.discordjson.json.ImmutableStickerData
 import discord4j.discordjson.json.ImmutableUserData
 import discord4j.discordjson.json.ImmutableVoiceStateData
 import discord4j.discordjson.json.MemberData
@@ -24,6 +25,7 @@ import discord4j.discordjson.json.PartialMessageData
 import discord4j.discordjson.json.PartialUserData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
+import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.json.UnavailableGuildData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
@@ -68,7 +70,6 @@ internal fun guild(guildId: Long): ImmutableGuildCreateData.Builder {
 		.name("Deep Space 9")
 		.ownerId(generateUniqueSnowflakeId())
 		.verificationLevel(42)
-		.region("Alpha Quadrant")
 		.afkTimeout(42)
 		.defaultMessageNotifications(42)
 		.explicitContentFilter(42)
@@ -87,7 +88,6 @@ internal fun guildUpdate(guildId: Long): ImmutableGuildUpdateData.Builder {
 		.name("Terok Nor")
 		.ownerId(generateUniqueSnowflakeId())
 		.verificationLevel(42)
-		.region("Alpha Quadrant")
 		.afkTimeout(42)
 		.defaultMessageNotifications(42)
 		.explicitContentFilter(42)
@@ -155,6 +155,14 @@ internal fun role(roleId: Long): ImmutableRoleData.Builder {
 		.mentionable(true)
 		.position(Short.MAX_VALUE.toInt())
 		.managed(false)
+}
+
+internal fun sticker(stickerId: Long): ImmutableStickerData.Builder {
+	return StickerData.builder()
+		.id(stickerId)
+		.name(stickerId.toString())
+		.type(2)
+		.formatType(3)
 }
 
 internal fun user(userId: Long): ImmutableUserData.Builder {

@@ -1,19 +1,13 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
-import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.EmojiData
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), EmojiRepository {
-
-	companion object {
-		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
-	}
 
 	private val emojiKey = key("emoji")
 	private val emojiOps = RedisHashOps(emojiKey, factory, Long::class.java, EmojiData::class.java)
@@ -35,7 +29,7 @@ internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : Red
 		}
 
 		val ids = filtered.flatMap { it.second }.map { it.id().orElseThrow().asLong() }
-		val guilIds = filtered.map { it.first }
+		val guildIds = filtered.map { it.first }
 		val emojiMap = filtered.flatMap { it.second }.associateBy { it.id().orElseThrow().asLong() }
 
 		return Mono.defer {
@@ -44,7 +38,7 @@ internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : Red
 				filtered
 					.map { guildIndex.addElements(it.first, *it.second.map { emoji -> emoji.id().orElseThrow().asLong() }.toTypedArray()) }
 			).flatMap { it }
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, guildIds)
 
 			val save = emojiOps.putAll(emojiMap)
 

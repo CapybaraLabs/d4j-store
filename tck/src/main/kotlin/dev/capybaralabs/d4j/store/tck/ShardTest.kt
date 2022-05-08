@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.tck
 
+import dev.capybaralabs.d4j.store.common.addStickers
 import discord4j.common.store.api.`object`.InvalidationCause
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.gateway.ChannelCreate
@@ -258,6 +259,40 @@ internal class ShardTest(storeLayoutProvider: StoreLayoutProvider) {
 
 
 	@Test
+	fun onShardInvalidation_deleteStickersOnThisShard() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).addStickers(sticker(stickerId).build()).build())
+			.build()
+		updater.onGuildCreate(800, guildCreate).block()
+
+		updater.onShardInvalidation(800, InvalidationCause.HARD_RECONNECT).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block()).isNull()
+		assertThat(accessor.stickers.collectList().block())
+			.noneMatch { it.id().asLong() == stickerId }
+	}
+
+	@Test
+	fun onShardInvalidation_keepStickersOnOtherShards() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).addStickers(sticker(stickerId).build()).build())
+			.build()
+		updater.onGuildCreate(811, guildCreate).block()
+
+		updater.onShardInvalidation(810, InvalidationCause.HARD_RECONNECT).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block())
+			.matches { it.id().asLong() == stickerId }
+		assertThat(accessor.stickers.collectList().block())
+			.anyMatch { it.id().asLong() == stickerId }
+	}
+
+
+	@Test
 	fun onShardInvalidation_deleteVoiceStatesOnThisShard() {
 		val guildId = generateUniqueSnowflakeId()
 		val channelId = generateUniqueSnowflakeId()
@@ -265,9 +300,9 @@ internal class ShardTest(storeLayoutProvider: StoreLayoutProvider) {
 		val voiceStateUpdate = VoiceStateUpdateDispatch.builder()
 			.voiceState(voiceStateInChannel(guildId, channelId, userId).build())
 			.build()
-		updater.onVoiceStateUpdateDispatch(800, voiceStateUpdate).block()
+		updater.onVoiceStateUpdateDispatch(900, voiceStateUpdate).block()
 
-		updater.onShardInvalidation(800, InvalidationCause.HARD_RECONNECT).block()
+		updater.onShardInvalidation(900, InvalidationCause.HARD_RECONNECT).block()
 
 		assertThat(accessor.getVoiceStateById(guildId, userId).block()).isNull()
 		assertThat(accessor.voiceStates.collectList().block())
@@ -282,9 +317,9 @@ internal class ShardTest(storeLayoutProvider: StoreLayoutProvider) {
 		val voiceStateUpdate = VoiceStateUpdateDispatch.builder()
 			.voiceState(voiceStateInChannel(guildId, channelId, userId).build())
 			.build()
-		updater.onVoiceStateUpdateDispatch(810, voiceStateUpdate).block()
+		updater.onVoiceStateUpdateDispatch(910, voiceStateUpdate).block()
 
-		updater.onShardInvalidation(811, InvalidationCause.HARD_RECONNECT).block()
+		updater.onShardInvalidation(911, InvalidationCause.HARD_RECONNECT).block()
 
 		assertThat(accessor.getVoiceStateById(guildId, userId).block())
 			.matches(isVoiceState(guildId, channelId, userId))
@@ -305,19 +340,19 @@ internal class ShardTest(storeLayoutProvider: StoreLayoutProvider) {
 					member(userIdB).build(),
 				).build()
 			).build()
-		updater.onGuildCreate(900, guildCreateA).block()
+		updater.onGuildCreate(1000, guildCreateA).block()
 		val guildCreateB = GuildCreate.builder()
 			.guild(
 				guild(guildIdB).addMembers(
 					member(userIdB).build(),
 				).build()
 			).build()
-		updater.onGuildCreate(901, guildCreateB).block()
+		updater.onGuildCreate(1001, guildCreateB).block()
 
 		assertThat(accessor.getUserById(userIdA).block()).isNotNull
 		assertThat(accessor.getUserById(userIdB).block()).isNotNull
 
-		updater.onShardInvalidation(900, InvalidationCause.LOGOUT).block()
+		updater.onShardInvalidation(1000, InvalidationCause.LOGOUT).block()
 
 		assertThat(accessor.getUserById(userIdA).block()).isNull()
 		assertThat(accessor.getUserById(userIdB).block()).isNotNull

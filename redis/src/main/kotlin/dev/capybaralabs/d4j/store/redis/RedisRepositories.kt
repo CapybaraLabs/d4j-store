@@ -9,6 +9,7 @@ import dev.capybaralabs.d4j.store.redis.repository.RedisMemberRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisMessageRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisPresenceRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisRoleRepository
+import dev.capybaralabs.d4j.store.redis.repository.RedisStickerRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisUserRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisVoiceStateRepository
 import reactor.core.publisher.Mono
@@ -21,6 +22,7 @@ internal class RedisRepositories(
 	override val messages: RedisMessageRepository,
 	override val presences: RedisPresenceRepository,
 	override val roles: RedisRoleRepository,
+	override val stickers: RedisStickerRepository,
 	override val users: RedisUserRepository,
 	override val voiceStates: RedisVoiceStateRepository
 ) : Repositories {

@@ -12,6 +12,7 @@ import dev.capybaralabs.d4j.store.redis.repository.RedisMemberRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisMessageRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisPresenceRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisRoleRepository
+import dev.capybaralabs.d4j.store.redis.repository.RedisStickerRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisUserRepository
 import dev.capybaralabs.d4j.store.redis.repository.RedisVoiceStateRepository
 import discord4j.common.store.api.layout.DataAccessor
@@ -37,6 +38,7 @@ class RedisStoreLayout(
 			RedisMessageRepository(prefix, factory),
 			RedisPresenceRepository(prefix, factory),
 			RedisRoleRepository(prefix, factory),
+			RedisStickerRepository(prefix, factory),
 			RedisUserRepository(prefix, factory),
 			RedisVoiceStateRepository(prefix, factory),
 		)

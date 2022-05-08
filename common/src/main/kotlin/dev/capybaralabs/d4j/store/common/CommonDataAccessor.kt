@@ -9,6 +9,7 @@ import discord4j.discordjson.json.MemberData
 import discord4j.discordjson.json.MessageData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
+import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
 import reactor.core.publisher.Flux
@@ -105,6 +106,17 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 //			.map { it.roles().size.toLong() }
 		return repositories.roles.countRolesInGuild(guildId)
 			.checkpoint("countRolesInGuild $guildId")
+	}
+
+
+	override fun countStickers(): Mono<Long> {
+		return repositories.stickers.countStickers()
+			.checkpoint("countStickers")
+	}
+
+	override fun countStickersInGuild(guildId: Long): Mono<Long> {
+		return repositories.stickers.countStickersInGuild(guildId)
+			.checkpoint("countStickersInGuild $guildId")
 	}
 
 
@@ -241,6 +253,21 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 			.checkpoint("getRoleById $roleId")
 	}
 
+
+	override fun getStickers(): Flux<StickerData> {
+		return repositories.stickers.getStickers()
+			.checkpoint("getStickers")
+	}
+
+	override fun getStickersInGuild(guildId: Long): Flux<StickerData> {
+		return repositories.stickers.getStickersInGuild(guildId)
+			.checkpoint("getStickersInGuild $guildId")
+	}
+
+	override fun getStickerById(guildId: Long, stickerId: Long): Mono<StickerData> {
+		return repositories.stickers.getStickerById(guildId, stickerId)
+			.checkpoint("getStickerById $guildId $stickerId")
+	}
 
 	override fun getUsers(): Flux<UserData> {
 		return repositories.users.getUsers()

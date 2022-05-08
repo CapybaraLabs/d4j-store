@@ -13,6 +13,7 @@ import dev.capybaralabs.d4j.store.postgres.repository.PostgresMessageRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresPresenceRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresRepositories
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresRoleRepository
+import dev.capybaralabs.d4j.store.postgres.repository.PostgresStickerRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresUserRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresVoiceStateRepository
 import discord4j.common.store.api.layout.DataAccessor
@@ -51,6 +52,7 @@ class PostgresStoreLayout(
 			PostgresMessageRepository(connectionFactory, serde),
 			PostgresPresenceRepository(connectionFactory, serde),
 			PostgresRoleRepository(connectionFactory, serde),
+			PostgresStickerRepository(connectionFactory, serde),
 			PostgresUserRepository(connectionFactory, serde),
 			PostgresVoiceStateRepository(connectionFactory, serde),
 		)

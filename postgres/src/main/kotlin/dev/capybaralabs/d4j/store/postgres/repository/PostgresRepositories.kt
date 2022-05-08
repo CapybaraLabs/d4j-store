@@ -15,6 +15,7 @@ internal class PostgresRepositories internal constructor(
 	override val messages: PostgresMessageRepository,
 	override val presences: PostgresPresenceRepository,
 	override val roles: PostgresRoleRepository,
+	override val stickers: PostgresStickerRepository,
 	override val users: PostgresUserRepository,
 	override val voiceStates: PostgresVoiceStateRepository,
 ) : Repositories {

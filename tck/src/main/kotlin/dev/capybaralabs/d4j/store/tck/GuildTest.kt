@@ -1,6 +1,8 @@
 package dev.capybaralabs.d4j.store.tck
 
+import dev.capybaralabs.d4j.store.common.addStickers
 import dev.capybaralabs.d4j.store.common.repository.flag.StoreFlag
+import dev.capybaralabs.d4j.store.common.stickersOrEmpty
 import discord4j.discordjson.json.gateway.GuildCreate
 import discord4j.discordjson.json.gateway.GuildMembersChunk
 import discord4j.discordjson.json.gateway.GuildUpdate
@@ -322,6 +324,45 @@ internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 		assertThat(accessor.roles.collectList().block())
 			.anyMatch { it.id().asLong() == roleIdA }
 			.anyMatch { it.id().asLong() == roleIdB }
+	}
+
+	@Test
+	fun onGuildCreate_createStickers() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerIdA = generateUniqueSnowflakeId()
+		val stickerIdB = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId)
+					.addStickers(
+						sticker(stickerIdA).build(),
+						sticker(stickerIdB).build(),
+					)
+					.build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+
+		val stickerA = accessor.getStickerById(guildId, stickerIdA).block()!!
+		assertThat(stickerA.id().asLong()).isEqualTo(stickerIdA)
+
+		val stickerB = accessor.getStickerById(guildId, stickerIdB).block()!!
+		assertThat(stickerB.id().asLong()).isEqualTo(stickerIdB)
+
+		val count = accessor.countStickersInGuild(guildId).block()!!
+		assertThat(count).isEqualTo(2)
+
+		val guild = accessor.getGuildById(guildId).block()!!
+		assertThat(guild.stickersOrEmpty()).hasSize(2)
+		assertThat(accessor.getStickersInGuild(guildId).collectList().block())
+			.hasSize(2)
+			.anyMatch { it.id().asLong() == stickerIdA }
+			.anyMatch { it.id().asLong() == stickerIdB }
+		assertThat(accessor.stickers.collectList().block())
+			.anyMatch { it.id().asLong() == stickerIdA }
+			.anyMatch { it.id().asLong() == stickerIdB }
 	}
 
 	@Test
@@ -660,6 +701,34 @@ internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 		assertThat(accessor.getRolesInGuild(guildId).collectList().block()).isEmpty()
 		assertThat(accessor.roles.collectList().block())
 			.noneMatch { it.id().asLong() == roleId }
+	}
+
+	@Test
+	fun onGuildDelete_deleteStickers() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).addStickers(sticker(stickerId).build()).build())
+			.build()
+
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block()).isNotNull
+		assertThat(accessor.countStickersInGuild(guildId).block()!!).isOne
+		assertThat(accessor.getGuildById(guildId).block()!!.stickersOrEmpty()).hasSize(1)
+		assertThat(accessor.getStickersInGuild(guildId).collectList().block()).hasSize(1)
+		assertThat(accessor.stickers.collectList().block())
+			.anyMatch { it.id().asLong() == stickerId }
+
+
+		updater.onGuildDelete(0, guildDelete(guildId)).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block()).isNull()
+		assertThat(accessor.countStickersInGuild(guildId).block()!!).isZero
+		assertThat(accessor.getStickersInGuild(guildId).collectList().block()).isEmpty()
+		assertThat(accessor.stickers.collectList().block())
+			.noneMatch { it.id().asLong() == stickerId }
 	}
 
 	@Test

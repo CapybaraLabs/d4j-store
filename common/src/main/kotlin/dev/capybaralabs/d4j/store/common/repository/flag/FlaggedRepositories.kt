@@ -8,6 +8,7 @@ import dev.capybaralabs.d4j.store.common.repository.MessageRepository
 import dev.capybaralabs.d4j.store.common.repository.PresenceRepository
 import dev.capybaralabs.d4j.store.common.repository.Repositories
 import dev.capybaralabs.d4j.store.common.repository.RoleRepository
+import dev.capybaralabs.d4j.store.common.repository.StickerRepository
 import dev.capybaralabs.d4j.store.common.repository.UserRepository
 import dev.capybaralabs.d4j.store.common.repository.VoiceStateRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopChannelRepository
@@ -17,6 +18,7 @@ import dev.capybaralabs.d4j.store.common.repository.noop.NoopMemberRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopMessageRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopPresenceRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopRoleRepository
+import dev.capybaralabs.d4j.store.common.repository.noop.NoopStickerRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopUserRepository
 import dev.capybaralabs.d4j.store.common.repository.noop.NoopVoiceStateRepository
 import java.util.EnumSet
@@ -31,6 +33,7 @@ class FlaggedRepositories(private val storeFlags: EnumSet<StoreFlag>, private va
 	private val noopMessages = NoopMessageRepository()
 	private val noopPresences = NoopPresenceRepository()
 	private val noopRoles = NoopRoleRepository()
+	private val noopStickers = NoopStickerRepository()
 	private val noopUsers = NoopUserRepository()
 	private val noopVoiceStates = NoopVoiceStateRepository()
 
@@ -49,6 +52,8 @@ class FlaggedRepositories(private val storeFlags: EnumSet<StoreFlag>, private va
 		get() = if (storeFlags.contains(StoreFlag.PRESENCE)) delegate.presences else noopPresences
 	override val roles: RoleRepository
 		get() = if (storeFlags.contains(StoreFlag.ROLE)) delegate.roles else noopRoles
+	override val stickers: StickerRepository
+		get() = if (storeFlags.contains(StoreFlag.STICKER)) delegate.stickers else noopStickers
 	override val users: UserRepository
 		get() = if (storeFlags.contains(StoreFlag.USER)) delegate.users else noopUsers
 	override val voiceStates: VoiceStateRepository

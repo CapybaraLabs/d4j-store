@@ -1,19 +1,13 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
-import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.RoleRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.RoleData
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisRoleRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), RoleRepository {
-
-	companion object {
-		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
-	}
 
 	private val roleKey = key("role")
 	private val roleOps = RedisHashOps(roleKey, factory, Long::class.java, RoleData::class.java)
