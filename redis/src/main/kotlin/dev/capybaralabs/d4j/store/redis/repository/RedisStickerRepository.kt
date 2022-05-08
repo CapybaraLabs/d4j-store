@@ -1,20 +1,14 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
-import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.StickerRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.StickerData
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisStickerRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), StickerRepository {
-
-	companion object {
-		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
-	}
 
 	private val stickerKey = key("sticker")
 	private val stickerOps = RedisHashOps(stickerKey, factory, Long::class.java, StickerData::class.java)

@@ -1,19 +1,13 @@
 package dev.capybaralabs.d4j.store.redis.repository
 
-import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.collectSet
 import dev.capybaralabs.d4j.store.common.repository.EmojiRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.EmojiData
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), EmojiRepository {
-
-	companion object {
-		private val log = LoggerFactory.getLogger(CommonGatewayDataUpdater::class.java)
-	}
 
 	private val emojiKey = key("emoji")
 	private val emojiOps = RedisHashOps(emojiKey, factory, Long::class.java, EmojiData::class.java)

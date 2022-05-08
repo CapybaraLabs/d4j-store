@@ -26,7 +26,7 @@ enum class StoreFlag {
 
 		fun allBut(vararg storeFlags: StoreFlag): EnumSet<StoreFlag> {
 			val result = all()
-			result.removeAll(storeFlags.asList())
+			result.removeAll(storeFlags.toSet())
 			return result
 		}
 	}
