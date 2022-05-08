@@ -35,7 +35,7 @@ internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : Red
 		}
 
 		val ids = filtered.flatMap { it.second }.map { it.id().orElseThrow().asLong() }
-		val guilIds = filtered.map { it.first }
+		val guildIds = filtered.map { it.first }
 		val emojiMap = filtered.flatMap { it.second }.associateBy { it.id().orElseThrow().asLong() }
 
 		return Mono.defer {
@@ -44,7 +44,7 @@ internal class RedisEmojiRepository(prefix: String, factory: RedisFactory) : Red
 				filtered
 					.map { guildIndex.addElements(it.first, *it.second.map { emoji -> emoji.id().orElseThrow().asLong() }.toTypedArray()) }
 			).flatMap { it }
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, guilIds)
+			val addToGuildShardIndex = gShardIndex.addElements(shardId, guildIds)
 
 			val save = emojiOps.putAll(emojiMap)
 
