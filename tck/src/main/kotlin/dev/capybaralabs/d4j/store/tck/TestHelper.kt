@@ -16,6 +16,7 @@ import discord4j.discordjson.json.ImmutablePartialMessageData
 import discord4j.discordjson.json.ImmutablePartialUserData
 import discord4j.discordjson.json.ImmutablePresenceData
 import discord4j.discordjson.json.ImmutableRoleData
+import discord4j.discordjson.json.ImmutableStickerData
 import discord4j.discordjson.json.ImmutableUserData
 import discord4j.discordjson.json.ImmutableVoiceStateData
 import discord4j.discordjson.json.MemberData
@@ -24,6 +25,7 @@ import discord4j.discordjson.json.PartialMessageData
 import discord4j.discordjson.json.PartialUserData
 import discord4j.discordjson.json.PresenceData
 import discord4j.discordjson.json.RoleData
+import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.json.UnavailableGuildData
 import discord4j.discordjson.json.UserData
 import discord4j.discordjson.json.VoiceStateData
@@ -153,6 +155,13 @@ internal fun role(roleId: Long): ImmutableRoleData.Builder {
 		.mentionable(true)
 		.position(Short.MAX_VALUE.toInt())
 		.managed(false)
+}
+
+internal fun sticker(stickerId: Long): ImmutableStickerData.Builder {
+	return StickerData.builder()
+		.id(stickerId)
+		.type(2)
+		.formatType(3)
 }
 
 internal fun user(userId: Long): ImmutableUserData.Builder {

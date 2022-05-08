@@ -1,7 +1,12 @@
 package dev.capybaralabs.d4j.store.common
 
+import discord4j.discordjson.Id
 import discord4j.discordjson.json.EmojiData
+import discord4j.discordjson.json.GuildCreateData
+import discord4j.discordjson.json.GuildData
+import discord4j.discordjson.json.ImmutableGuildCreateData
 import discord4j.discordjson.json.ReactionData
+import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.possible.Possible
 import java.util.Optional
 import reactor.core.publisher.Flux
@@ -37,6 +42,22 @@ fun <T> Possible<T>.isPresent(): Boolean {
 	return !isAbsent
 }
 
+fun <T> Possible<T>.orElse(other: T): T {
+	return toOptional().orElse(other)
+}
+
 fun <T> Flux<T>.collectSet(): Mono<Set<T>> = collectList().map { it.toSet() }
 
 fun <N : Number> Mono<N>.toLong(): Mono<Long> = map { it.toLong() }
+
+fun GuildData.stickersOrEmpty(): List<Id> {
+	return stickers().orElse(listOf())
+}
+
+fun GuildCreateData.stickersOrEmpty(): List<StickerData> {
+	return stickers().orElse(listOf())
+}
+
+fun ImmutableGuildCreateData.Builder.addStickers(vararg stickerData: StickerData): ImmutableGuildCreateData.Builder {
+	return addAllStickers(stickerData.toList())
+}

@@ -13,6 +13,7 @@ enum class StoreFlag {
 	MESSAGE,
 	PRESENCE,
 	ROLE,
+	STICKER,
 	USER,
 	VOICE_STATE,
 	//

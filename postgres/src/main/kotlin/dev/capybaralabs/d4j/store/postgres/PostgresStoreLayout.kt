@@ -5,6 +5,7 @@ import dev.capybaralabs.d4j.store.common.CommonGatewayDataUpdater
 import dev.capybaralabs.d4j.store.common.Serde
 import dev.capybaralabs.d4j.store.common.repository.flag.FlaggedRepositories
 import dev.capybaralabs.d4j.store.common.repository.flag.StoreFlag
+import dev.capybaralabs.d4j.store.common.repository.noop.NoopStickerRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresChannelRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresEmojiRepository
 import dev.capybaralabs.d4j.store.postgres.repository.PostgresGuildRepository
@@ -51,6 +52,7 @@ class PostgresStoreLayout(
 			PostgresMessageRepository(connectionFactory, serde),
 			PostgresPresenceRepository(connectionFactory, serde),
 			PostgresRoleRepository(connectionFactory, serde),
+			NoopStickerRepository(),
 			PostgresUserRepository(connectionFactory, serde),
 			PostgresVoiceStateRepository(connectionFactory, serde),
 		)

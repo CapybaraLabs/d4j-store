@@ -1,6 +1,7 @@
 package dev.capybaralabs.d4j.store.postgres.repository
 
 import dev.capybaralabs.d4j.store.common.repository.Repositories
+import dev.capybaralabs.d4j.store.common.repository.noop.NoopStickerRepository
 import dev.capybaralabs.d4j.store.postgres.mapToCount
 import dev.capybaralabs.d4j.store.postgres.withConnection
 import io.r2dbc.spi.ConnectionFactory
@@ -15,6 +16,7 @@ internal class PostgresRepositories internal constructor(
 	override val messages: PostgresMessageRepository,
 	override val presences: PostgresPresenceRepository,
 	override val roles: PostgresRoleRepository,
+	override val stickers: NoopStickerRepository,
 	override val users: PostgresUserRepository,
 	override val voiceStates: PostgresVoiceStateRepository,
 ) : Repositories {

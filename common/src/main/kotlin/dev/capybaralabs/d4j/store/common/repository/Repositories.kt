@@ -10,6 +10,7 @@ interface Repositories {
 	val messages: MessageRepository
 	val presences: PresenceRepository
 	val roles: RoleRepository
+	val stickers: StickerRepository
 	val users: UserRepository
 	val voiceStates: VoiceStateRepository
 
