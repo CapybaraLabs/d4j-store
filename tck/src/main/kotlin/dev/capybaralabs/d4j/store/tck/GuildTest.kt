@@ -834,6 +834,54 @@ internal class GuildTest(storeLayoutProvider: StoreLayoutProvider) {
 			.noneMatch { it.id().asLong() == guildId }
 	}
 
+	@Test
+	fun onGuildUpdate_updateStickers() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerIdA = generateUniqueSnowflakeId()
+		val stickerIdB = generateUniqueSnowflakeId()
+
+		val guildCreate = GuildCreate.builder()
+			.guild(
+				guild(guildId).addStickers(
+					sticker(stickerIdA).build(),
+					sticker(stickerIdB).build(),
+				).build()
+			)
+			.build()
+
+		updater.onGuildCreate(0, guildCreate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.extractingList { it.stickersOrEmpty() }
+			.hasSize(2)
+			.anyMatch { it.asLong() == stickerIdA }
+			.anyMatch { it.asLong() == stickerIdB }
+
+
+		val stickerIdC = generateUniqueSnowflakeId()
+		val guildUpdate = GuildUpdate.builder()
+			.guild(
+				guildUpdate(guildId)
+					.addStickers(
+						sticker(stickerIdB).build(),
+						sticker(stickerIdC).build(),
+					)
+					.build()
+			)
+			.build()
+
+
+		updater.onGuildUpdate(0, guildUpdate).block()
+
+		assertThat(accessor.getGuildById(guildId).block())
+			.matches { it.id().asLong() == guildId }
+			.extractingList { it.stickersOrEmpty() }
+			.hasSize(2)
+			.anyMatch { it.asLong() == stickerIdB }
+			.anyMatch { it.asLong() == stickerIdC }
+	}
+
 
 	// https://github.com/Discord4J/Discord4J/issues/429
 	@Test

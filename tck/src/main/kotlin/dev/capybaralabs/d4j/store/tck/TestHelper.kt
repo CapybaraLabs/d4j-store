@@ -34,6 +34,8 @@ import discord4j.discordjson.possible.Possible
 import java.time.Instant
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
+import org.assertj.core.api.AbstractObjectAssert
+import org.assertj.core.api.ListAssert
 
 
 private val LONGS = AtomicLong(ThreadLocalRandom.current().nextLong(Long.MAX_VALUE / 2, Long.MAX_VALUE))
@@ -214,3 +216,14 @@ internal fun guildDelete(guildId: Long): GuildDelete {
 		.build()
 }
 
+/**
+ * Put type information back into extracted value
+ */
+internal fun <T, ACTUAL> AbstractObjectAssert<*, ACTUAL>.extractingList(extractor: (ACTUAL) -> List<T>): ListAssert<T> {
+	return extracting(extractor)
+		.asList()
+		.let {
+			@Suppress("UNCHECKED_CAST")
+			it as ListAssert<T>
+		}
+}

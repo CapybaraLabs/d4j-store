@@ -4,7 +4,9 @@ import discord4j.discordjson.Id
 import discord4j.discordjson.json.EmojiData
 import discord4j.discordjson.json.GuildCreateData
 import discord4j.discordjson.json.GuildData
+import discord4j.discordjson.json.GuildUpdateData
 import discord4j.discordjson.json.ImmutableGuildCreateData
+import discord4j.discordjson.json.ImmutableGuildUpdateData
 import discord4j.discordjson.json.ReactionData
 import discord4j.discordjson.json.StickerData
 import discord4j.discordjson.possible.Possible
@@ -58,6 +60,14 @@ fun GuildCreateData.stickersOrEmpty(): List<StickerData> {
 	return stickers().orElse(listOf())
 }
 
+fun GuildUpdateData.stickersOrEmpty(): List<StickerData> {
+	return stickers().orElse(listOf())
+}
+
 fun ImmutableGuildCreateData.Builder.addStickers(vararg stickerData: StickerData): ImmutableGuildCreateData.Builder {
+	return addAllStickers(stickerData.toList())
+}
+
+fun ImmutableGuildUpdateData.Builder.addStickers(vararg stickerData: StickerData): ImmutableGuildUpdateData.Builder {
 	return addAllStickers(stickerData.toList())
 }

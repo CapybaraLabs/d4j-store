@@ -620,6 +620,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 							.filter { it.isPresent }
 							.map { it.get() }
 					)
+					.stickers(dispatch.guild().stickersOrEmpty().map { it.id() })
 					.build()
 
 				repos.guilds
