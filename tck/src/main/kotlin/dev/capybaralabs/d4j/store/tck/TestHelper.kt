@@ -160,6 +160,7 @@ internal fun role(roleId: Long): ImmutableRoleData.Builder {
 internal fun sticker(stickerId: Long): ImmutableStickerData.Builder {
 	return StickerData.builder()
 		.id(stickerId)
+		.name(stickerId.toString())
 		.type(2)
 		.formatType(3)
 }

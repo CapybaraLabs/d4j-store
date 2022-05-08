@@ -323,12 +323,14 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 				// TODO delete no longer visible users
 				val deleteVoiceStates = repos.voiceStates.deleteByGuildId(guildId)
 				val deletePresences = repos.presences.deleteByGuildId(guildId)
+				val deleteStickers = repos.stickers.deleteByGuildId(guildId)
 				deleteChannels
 					.and(deleteEmojis)
 					.and(deleteMembers)
 					.and(deleteMessages)
 					.and(deletePresences)
 					.and(deleteRoles)
+					.and(deleteStickers)
 					.and(deleteVoiceStates)
 					.thenReturn(guild)
 			}
