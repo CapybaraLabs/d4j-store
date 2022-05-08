@@ -645,6 +645,8 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.doOnNext { log.debug("Invalidated $it presences on shard $shardId") }
 		val deleteRoles = repos.roles.deleteByShardId(shardId)
 			.doOnNext { log.debug("Invalidated $it roles on shard $shardId") }
+		val deleteStickers = repos.stickers.deleteByShardId(shardId)
+			.doOnNext { log.debug("Invalidated $it stickers on shard $shardId") }
 		val deleteVoiceStates = repos.voiceStates.deleteByShardId(shardId)
 			.doOnNext { log.debug("Invalidated $it voice states on shard $shardId") }
 
@@ -657,6 +659,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			deleteMessages,
 			deletePresenses,
 			deleteRoles,
+			deleteStickers,
 			deleteVoiceStates
 		)
 	}

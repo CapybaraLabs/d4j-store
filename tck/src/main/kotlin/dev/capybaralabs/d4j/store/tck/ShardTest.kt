@@ -1,5 +1,6 @@
 package dev.capybaralabs.d4j.store.tck
 
+import dev.capybaralabs.d4j.store.common.addStickers
 import discord4j.common.store.api.`object`.InvalidationCause
 import discord4j.discordjson.json.ClientStatusData
 import discord4j.discordjson.json.gateway.ChannelCreate
@@ -254,6 +255,40 @@ internal class ShardTest(storeLayoutProvider: StoreLayoutProvider) {
 			.matches { it.id().asLong() == roleId }
 		assertThat(accessor.roles.collectList().block())
 			.anyMatch { it.id().asLong() == roleId }
+	}
+
+
+	@Test
+	fun onShardInvalidation_deleteStickersOnThisShard() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).addStickers(sticker(stickerId).build()).build())
+			.build()
+		updater.onGuildCreate(200, guildCreate).block()
+
+		updater.onShardInvalidation(200, InvalidationCause.HARD_RECONNECT).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block()).isNull()
+		assertThat(accessor.stickers.collectList().block())
+			.noneMatch { it.id().asLong() == stickerId }
+	}
+
+	@Test
+	fun onShardInvalidation_keepStickersOnOtherShards() {
+		val guildId = generateUniqueSnowflakeId()
+		val stickerId = generateUniqueSnowflakeId()
+		val guildCreate = GuildCreate.builder()
+			.guild(guild(guildId).addStickers(sticker(stickerId).build()).build())
+			.build()
+		updater.onGuildCreate(211, guildCreate).block()
+
+		updater.onShardInvalidation(210, InvalidationCause.HARD_RECONNECT).block()
+
+		assertThat(accessor.getStickerById(guildId, stickerId).block())
+			.matches { it.id().asLong() == stickerId }
+		assertThat(accessor.stickers.collectList().block())
+			.anyMatch { it.id().asLong() == stickerId }
 	}
 
 
