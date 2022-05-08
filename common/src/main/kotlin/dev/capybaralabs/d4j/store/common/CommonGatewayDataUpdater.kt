@@ -255,12 +255,8 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val saveUsers = guildCreateDatas.flatMap { it.members() }.map { it.user() }.let { repos.users.saveAll(it) }
 
 		val saveStickers = guildCreateDatas.flatMap { guildCreateData ->
-			guildCreateData.stickersOrEmpty().map { stickerData ->
-				StickerData.builder()
-					.from(stickerData)
-					.guildId(guildCreateData.id().asLong())
-					.build()
-			}
+			guildCreateData.stickersOrEmpty()
+				.map { it.withGuildId(guildCreateData.id().asLong()) }
 		}.let { repos.stickers.saveAll(it, shardId) }
 
 		val saveVoiceStates = guildCreateDatas
@@ -343,12 +339,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		// TODO granular updates, loading the object and saving it back is suboptimal?
 
 		val stickers = dispatch.stickers()
-			.map {
-				StickerData.builder()
-					.from(it)
-					.guildId(guildId)
-					.build()
-			}
+			.map { it.withGuildId(guildId) }
 
 		val updateGuild: (GuildData) -> Mono<Void> = { oldGuild: GuildData ->
 			val updated = GuildData.builder()
@@ -358,21 +349,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			repos.guilds.save(updated, shardId)
 		}
 
-		val deleteStickers: (GuildData) -> Mono<Long> = { oldGuild: GuildData ->
-			// delete those stickers that are in the old guild but not the dispatch
-			val toDelete = oldGuild.stickersOrEmpty()
-				.filter { id -> stickers.none { sticker -> sticker.id() == id } }
-				.map { it.asLong() }
-			repos.stickers.deleteByIds(toDelete, guildId)
-		}
-
-		val saveStickers = repos.stickers.saveAll(stickers, shardId)
+		val updateStickers: (GuildData) -> Mono<Void> = updateStickers(shardId, stickers, guildId)
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
 				updateGuild.invoke(guild)
-					.and(deleteStickers.invoke(guild))
-					.and(saveStickers)
+					.and(updateStickers.invoke(guild))
 					.thenMany(
 						Flux.fromIterable(guild.stickersOrEmpty())
 							.map { it.asLong() }
@@ -380,6 +362,19 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					)
 			}
 			.collectList().map { it.toSet() }
+	}
+
+	private fun updateStickers(shardId: Int, stickers: List<StickerData>, guildId: Long): (GuildData) -> Mono<Void> {
+		return { oldGuild: GuildData ->
+			// delete those stickers that are in the old guild but not the dispatch
+			val toDelete = oldGuild.stickersOrEmpty()
+				.filter { id -> stickers.none { sticker -> sticker.id() == id } }
+				.map { it.asLong() }
+
+			val deleteOldStickers = repos.stickers.deleteByIds(toDelete, guildId)
+			val saveStickers = repos.stickers.saveAll(stickers, shardId)
+			deleteOldStickers.and(saveStickers)
+		}
 	}
 
 	override fun onGuildEmojisUpdate(shardId: Int, dispatch: GuildEmojisUpdate): Mono<Set<EmojiData>> {
@@ -395,22 +390,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			repos.guilds.save(updated, shardId)
 		}
 
-		val deleteEmojis: (GuildData) -> Mono<Long> = { oldGuild: GuildData ->
-			// delete those emojis that are in the old guild but not the dispatch
-			val toDelete = oldGuild.emojis()
-				.filter { id -> dispatch.emojis().none { emoji -> emoji.id().isPresent && emoji.id().get() == id } }
-				.map { it.asLong() }
-			repos.emojis.deleteByIds(toDelete, guildId)
-		}
-
-		val saveEmojis = dispatch.emojis()
-			.let { repos.emojis.saveAll(mapOf(Pair(guildId, it)), shardId) }
+		val updateEmojis: (GuildData) -> Mono<Void> = updateEmojis(shardId, dispatch.emojis(), guildId)
 
 		return repos.guilds.getGuildById(guildId)
 			.flatMapMany { guild ->
 				updateGuild.invoke(guild)
-					.and(deleteEmojis.invoke(guild))
-					.and(saveEmojis)
+					.and(updateEmojis.invoke(guild))
 					.thenMany(
 						Flux.fromIterable(guild.emojis())
 							.map { it.asLong() }
@@ -608,10 +593,15 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 	override fun onGuildUpdate(shardId: Int, dispatch: GuildUpdate): Mono<GuildData> {
 		val guildId = dispatch.guild().id().asLong()
 
+
+		val updateEmojis = updateEmojis(shardId, dispatch.guild().emojis(), guildId)
+		// TODO update roles?
+		val updateStickers = updateStickers(shardId, dispatch.guild().stickersOrEmpty().map { it.withGuildId(guildId) }, guildId)
+
 		return repos.guilds.getGuildById(guildId)
-			.flatMap { oldGuildData ->
+			.flatMap { previousData ->
 				val newGuildData = GuildData.builder()
-					.from(oldGuildData)
+					.from(previousData)
 					.from(dispatch.guild())
 					.roles(dispatch.guild().roles().map { it.id() })
 					.emojis(
@@ -623,9 +613,12 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 					.stickers(dispatch.guild().stickersOrEmpty().map { it.id() })
 					.build()
 
-				repos.guilds
-					.save(newGuildData, shardId)
-					.thenReturn(oldGuildData)
+				val updateGuild = repos.guilds.save(newGuildData, shardId)
+
+				updateGuild
+					.and(updateEmojis.invoke(previousData))
+					.and(updateStickers.invoke(previousData))
+					.thenReturn(previousData)
 			}
 	}
 

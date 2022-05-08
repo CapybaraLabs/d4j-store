@@ -71,3 +71,10 @@ fun ImmutableGuildCreateData.Builder.addStickers(vararg stickerData: StickerData
 fun ImmutableGuildUpdateData.Builder.addStickers(vararg stickerData: StickerData): ImmutableGuildUpdateData.Builder {
 	return addAllStickers(stickerData.toList())
 }
+
+fun StickerData.withGuildId(guildId: Long): StickerData {
+	return StickerData.builder()
+		.from(this)
+		.guildId(guildId)
+		.build()
+}
