@@ -81,10 +81,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		var addChannelToGuild = Mono.empty<Void>()
 		if (guildId.isPresent) {
 			addChannelToGuild = repos.guilds.getGuildById(guildId.get().asLong())
-				.map { guildData ->
+				.map { data ->
 					GuildData.builder()
-						.from(guildData)
-						.addChannel(channel.id()) // TODO use deduplication?
+						.from(data)
+						.channels(data.channels().toSet() + channel.id())
 						.build()
 				}
 				.flatMap { repos.guilds.save(it, shardId) }
@@ -101,10 +101,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val removeChannelFromGuild = when (guildId != null) {
 			true -> {
 				repos.guilds.getGuildById(guildId.asLong())
-					.map { guildData ->
+					.map { data ->
 						GuildData.builder()
-							.from(guildData)
-							.channels(guildData.channels().toList() - channel.id())
+							.from(data)
+							.channels(data.channels().toSet() - channel.id())
 							.build()
 					}
 					.flatMap { repos.guilds.save(it, shardId) }
@@ -344,7 +344,7 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val updateGuild: (GuildData) -> Mono<Void> = { oldGuild: GuildData ->
 			val updated = GuildData.builder()
 				.from(oldGuild)
-				.stickers(stickers.mapNotNull { it.id() })
+				.stickers(stickers.map { it.id() })
 				.build()
 			repos.guilds.save(updated, shardId)
 		}
@@ -405,18 +405,29 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 			.collectList().map { it.toSet() }
 	}
 
+	private fun updateEmojis(shardId: Int, emojis: List<EmojiData>, guildId: Long): (GuildData) -> Mono<Void> {
+		return { oldData ->
+			// delete those emojis that are in the old guild but not the dispatch
+			val toDelete = oldData.emojis()
+				.filter { id -> emojis.none { emoji -> emoji.id().isPresent && emoji.id().get() == id } }
+				.map { it.asLong() }
+
+			val deleteOldEmojis = repos.emojis.deleteByIds(toDelete, guildId)
+			val saveEmojis = repos.emojis.saveAll(mapOf(Pair(guildId, emojis)), shardId)
+			deleteOldEmojis.and(saveEmojis)
+		}
+	}
+
 	override fun onGuildMemberAdd(shardId: Int, dispatch: GuildMemberAdd): Mono<Void> {
 		val guildId = dispatch.guildId().asLong()
 		val member = dispatch.member()
 		val user = member.user()
 
 		val addMemberToGuild = repos.guilds.getGuildById(guildId)
-			.map {
-				GuildData.builder().from(it)
-					.members(
-						it.members().toList() + member.user().id()
-					) // TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
-					.memberCount(it.memberCount() + 1)
+			.map { data ->
+				GuildData.builder().from(data)
+					.members(data.members().toSet() + member.user().id())
+					.memberCount(data.memberCount() + 1)
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardId) }// TODO granular update
@@ -435,12 +446,11 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val userId = userData.id().asLong()
 
 		val removeMemberId = repos.guilds.getGuildById(guildId)
-			.map {
+			.map { data ->
 				GuildData.builder()
-					.from(it)
-					// TODO list operations suck, potential duplicates possible. any way we can leverage sets here?
-					.members(it.members().toList() - userData.id())
-					.memberCount(it.memberCount() - 1)
+					.from(data)
+					.members(data.members().toSet() - userData.id())
+					.memberCount(data.memberCount() - 1)
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
@@ -471,10 +481,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 
 		// TODO consider granular update in DB
 		val addMemberIds = repos.guilds.getGuildById(guildId)
-			.map {
+			.map { data ->
 				GuildData.builder()
-					.from(it)
-					.members(sumDistinct(it.members(), members.map { member -> member.user().id() }))
+					.from(data)
+					.members(data.members().toSet() + members.map { member -> member.user().id() })
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
@@ -523,10 +533,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val role = dispatch.role()
 
 		val addRoleId = repos.guilds.getGuildById(guildId)
-			.map { guild ->
+			.map { data ->
 				GuildData.builder()
-					.from(guild)
-					.addRole(role.id())
+					.from(data)
+					.roles(data.roles().toSet() + role.id())
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
@@ -543,10 +553,10 @@ class CommonGatewayDataUpdater(private val repos: Repositories) : GatewayDataUpd
 		val getRole = repos.roles.getRoleById(roleId)
 
 		val removeRoleId = repos.guilds.getGuildById(guildId)
-			.map { guild ->
+			.map { data ->
 				GuildData.builder()
-					.from(guild)
-					.roles(guild.roles().toList() - dispatch.roleId())
+					.from(data)
+					.roles(data.roles().toSet() - dispatch.roleId())
 					.build()
 			}
 			.flatMap { repos.guilds.save(it, shardId) }
