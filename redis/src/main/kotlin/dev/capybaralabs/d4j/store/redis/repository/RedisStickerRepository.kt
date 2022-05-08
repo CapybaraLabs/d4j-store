@@ -17,15 +17,6 @@ internal class RedisStickerRepository(prefix: String, factory: RedisFactory) : R
 	private val guildIndex = oneWayIndex("$stickerKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$stickerKey:guild-shard-index", factory)
 
-	override fun save(guildId: Long, sticker: StickerData, shardId: Int): Mono<Void> {
-		val data = StickerData.builder()
-			.from(sticker)
-			.guildId(guildId)
-			.build()
-
-		return saveAll(listOf(data), shardId)
-	}
-
 	override fun saveAll(stickers: List<StickerData>, shardId: Int): Mono<Void> {
 		val filtered = stickers.filter { it.guildId().isPresent() }
 		if (filtered.isEmpty()) {

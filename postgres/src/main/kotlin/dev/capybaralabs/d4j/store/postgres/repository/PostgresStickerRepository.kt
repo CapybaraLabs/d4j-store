@@ -38,15 +38,6 @@ internal class PostgresStickerRepository(private val factory: ConnectionFactory,
 		}.blockLast()
 	}
 
-	override fun save(guildId: Long, sticker: StickerData, shardId: Int): Mono<Void> {
-		val data = StickerData.builder()
-			.from(sticker)
-			.guildId(guildId)
-			.build()
-
-		return saveAll(listOf(data), shardId)
-	}
-
 	override fun saveAll(stickers: List<StickerData>, shardId: Int): Mono<Void> {
 		val filtered = stickers.filter { it.guildId().isPresent() }
 		if (filtered.isEmpty()) {

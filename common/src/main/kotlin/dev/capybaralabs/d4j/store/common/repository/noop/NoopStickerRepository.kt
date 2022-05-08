@@ -7,10 +7,6 @@ import reactor.core.publisher.Mono
 
 class NoopStickerRepository : StickerRepository {
 
-	override fun save(guildId: Long, sticker: StickerData, shardId: Int): Mono<Void> {
-		return Mono.empty()
-	}
-
 	override fun saveAll(stickers: List<StickerData>, shardId: Int): Mono<Void> {
 		return Mono.empty()
 	}

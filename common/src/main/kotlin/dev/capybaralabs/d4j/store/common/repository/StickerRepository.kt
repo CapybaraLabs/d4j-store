@@ -5,7 +5,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface StickerRepository {
-	fun save(guildId: Long, sticker: StickerData, shardId: Int): Mono<Void>
 	fun saveAll(stickers: List<StickerData>, shardId: Int): Mono<Void>
 
 	fun deleteByIds(stickerIds: List<Long>, guildId: Long): Mono<Long>
