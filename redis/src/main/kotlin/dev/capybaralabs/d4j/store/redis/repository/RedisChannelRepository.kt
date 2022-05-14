@@ -7,6 +7,8 @@ import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
 import org.intellij.lang.annotations.Language
 import org.springframework.data.redis.core.script.RedisScript
+import org.springframework.data.redis.serializer.RedisElementReader
+import org.springframework.data.redis.serializer.RedisElementWriter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -21,7 +23,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val guildIndex = oneWayIndex("$channelKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$channelKey:guild-shard-index", factory)
 
-	private val evalOps = factory.createRedisOperations<String, String>()
+	private val evalOps = factory.createRedisOperations<String, ChannelData>()
+	private val genericWriter = RedisElementWriter.from(factory.genericSerializer<Any>())
+	private val longReader = RedisElementReader.from(factory.serializer(Long::class.java))
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
@@ -76,7 +80,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		return evalOps.execute(
 			deleteScript,
 			listOfNotNull(channelKey, shardIndexKey, guildId?.let { guildIndex.key(it) }),
-			listOf(channelId.toString())
+			listOf(channelId),
+			genericWriter,
+			longReader,
 		).last()
 	}
 

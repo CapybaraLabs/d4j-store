@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.ReactiveRedisOperations
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.data.redis.core.ReactiveSetOperations
 import org.springframework.data.redis.core.ReactiveZSetOperations
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.RedisSerializer
@@ -66,7 +67,7 @@ class RedisFactory(private val connectionFactory: ReactiveRedisConnectionFactory
 		return ReactiveRedisTemplate(connectionFactory, context).opsForSet()
 	}
 
-	private fun <T> serializer(clazz: Class<T>): RedisSerializer<T> {
+	internal fun <T> serializer(clazz: Class<T>): RedisSerializer<T> {
 		return if (clazz == String::class.java) {
 			@Suppress("UNCHECKED_CAST")
 			StringRedisSerializer() as RedisSerializer<T>
@@ -77,4 +78,7 @@ class RedisFactory(private val connectionFactory: ReactiveRedisConnectionFactory
 		}
 	}
 
+	internal fun <T> genericSerializer(): RedisSerializer<Any> {
+		return GenericJackson2JsonRedisSerializer(objectMapper)
+	}
 }
