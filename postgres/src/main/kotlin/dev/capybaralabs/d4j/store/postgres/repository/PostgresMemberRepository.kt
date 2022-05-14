@@ -42,7 +42,6 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 		return saveAll(mapOf(Pair(guildId, listOf(member))), shardId)
 	}
 
-	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	override fun saveAll(membersByGuild: Map<Long, List<MemberData>>, shardId: Int): Mono<Void> {
 		val filtered = membersByGuild.filter { it.value.isNotEmpty() }
 		if (filtered.isEmpty()) {

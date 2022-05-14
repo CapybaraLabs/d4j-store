@@ -30,8 +30,10 @@ class FlaggedRepositories(private val storeFlags: EnumSet<StoreFlag>, private va
 	private val noopEmojis = NoopEmojiRepository()
 	private val noopGuilds = NoopGuildRepository()
 	private val noopMembers = NoopMemberRepository()
+	private val minimalUserMembers = MinimalUserMemberRepository(delegate.members)
 	private val noopMessages = NoopMessageRepository()
 	private val noopPresences = NoopPresenceRepository()
+	private val minimalUserPresences = MinimalUserPresenceRepository(delegate.presences)
 	private val noopRoles = NoopRoleRepository()
 	private val noopStickers = NoopStickerRepository()
 	private val noopUsers = NoopUserRepository()
@@ -45,11 +47,23 @@ class FlaggedRepositories(private val storeFlags: EnumSet<StoreFlag>, private va
 	override val guilds: GuildRepository
 		get() = if (storeFlags.contains(StoreFlag.GUILD)) delegate.guilds else noopGuilds
 	override val members: MemberRepository
-		get() = if (storeFlags.contains(StoreFlag.MEMBER)) delegate.members else noopMembers
+		get() = if (storeFlags.contains(StoreFlag.MEMBER))
+			if (storeFlags.contains(StoreFlag.USER))
+				delegate.members
+			else
+				minimalUserMembers
+		else
+			noopMembers
 	override val messages: MessageRepository
 		get() = if (storeFlags.contains(StoreFlag.MESSAGE)) delegate.messages else noopMessages
 	override val presences: PresenceRepository
-		get() = if (storeFlags.contains(StoreFlag.PRESENCE)) delegate.presences else noopPresences
+		get() = if (storeFlags.contains(StoreFlag.PRESENCE))
+			if (storeFlags.contains(StoreFlag.USER))
+				delegate.presences
+			else
+				minimalUserPresences
+		else
+			noopPresences
 	override val roles: RoleRepository
 		get() = if (storeFlags.contains(StoreFlag.ROLE)) delegate.roles else noopRoles
 	override val stickers: StickerRepository

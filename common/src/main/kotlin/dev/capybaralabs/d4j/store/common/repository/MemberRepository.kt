@@ -6,8 +6,6 @@ import reactor.core.publisher.Mono
 
 interface MemberRepository {
 	fun save(guildId: Long, member: MemberData, shardId: Int): Mono<Void>
-
-	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	fun saveAll(membersByGuild: Map<Long, List<MemberData>>, shardId: Int): Mono<Void>
 
 	fun deleteById(guildId: Long, userId: Long): Mono<Long>

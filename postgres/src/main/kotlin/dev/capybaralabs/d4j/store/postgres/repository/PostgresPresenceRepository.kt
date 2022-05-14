@@ -40,7 +40,6 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 		return saveAll(mapOf(Pair(guildId, listOf(presence))), shardId).then()
 	}
 
-	// TODO we are potentially duplicating .user() data here, is there a way to avoid it?
 	override fun saveAll(presencesByGuild: Map<Long, List<PresenceData>>, shardId: Int): Mono<Void> {
 		val filtered = presencesByGuild.filter { it.value.isNotEmpty() }
 		if (filtered.isEmpty()) {
