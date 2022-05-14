@@ -21,7 +21,6 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		return saveAll(listOf(channel), shardId)
 	}
 
-	// TODO add guildid to signature and simplify code
 	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		if (channels.isEmpty()) {
 			return Mono.empty()
