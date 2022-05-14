@@ -15,9 +15,6 @@ import discord4j.discordjson.json.VoiceStateData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-/**
- * TODO
- */
 class CommonDataAccessor(private val repositories: Repositories) : DataAccessor {
 
 	override fun countChannels(): Mono<Long> {
@@ -26,9 +23,6 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countChannelsInGuild(guildId: Long): Mono<Long> {
-// 		TODO consider alternative
-//		return repositories.guilds.getGuildById(guildId)
-//			.map { it.channels().size.toLong() }
 		return repositories.channels.countChannelsInGuild(guildId)
 			.checkpoint("countChannelsInGuild $guildId")
 	}
@@ -40,9 +34,6 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countEmojisInGuild(guildId: Long): Mono<Long> {
-// 		TODO consider alternative
-//		return repositories.guilds.getGuildById(guildId)
-//			.map { it.emojis().size.toLong() }
 		return repositories.emojis.countEmojisInGuild(guildId)
 			.checkpoint("countEmojisInGuild $guildId")
 	}
@@ -60,9 +51,6 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countMembersInGuild(guildId: Long): Mono<Long> {
-// 		TODO consider alternative
-//		return repositories.guilds.getGuildById(guildId)
-//			.map { it.members().size.toLong() }
 		return repositories.members.countMembersInGuild(guildId)
 			.checkpoint("countMembersInGuild $guildId")
 	}
@@ -101,9 +89,6 @@ class CommonDataAccessor(private val repositories: Repositories) : DataAccessor 
 	}
 
 	override fun countRolesInGuild(guildId: Long): Mono<Long> {
-// 		TODO consider alternative
-//		return repositories.guilds.getGuildById(guildId)
-//			.map { it.roles().size.toLong() }
 		return repositories.roles.countRolesInGuild(guildId)
 			.checkpoint("countRolesInGuild $guildId")
 	}
