@@ -24,7 +24,7 @@ class OneWayIndex<V>(private val keyPrefix: String, factory: RedisFactory, value
 	private val ops = factory.createRedisOperations(String::class.java, valueClass)
 	private val setOps = factory.createRedisSetOperations(String::class.java, valueClass)
 
-	private fun key(groupId: Long): String {
+	internal fun key(groupId: Long): String {
 		return "$keyPrefix:$groupId"
 	}
 
