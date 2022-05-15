@@ -11,6 +11,7 @@ import org.springframework.data.redis.serializer.RedisElementReader
 import org.springframework.data.redis.serializer.RedisElementWriter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.toMono
 
 internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : RedisRepository(prefix), ChannelRepository {
 
@@ -20,40 +21,99 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val shardIndexKey = "$channelKey:shard-index"
 	private val shardIndex = twoWayIndex(shardIndexKey, factory)
 
-	private val guildIndex = oneWayIndex("$channelKey:guild-index", factory)
-	private val gShardIndex = twoWayIndex("$channelKey:guild-shard-index", factory)
+	private val guildIndexKey = "$channelKey:guild-index"
+	private val guildIndex = oneWayIndex(guildIndexKey, factory)
+
+	private val gShardIndexKey = "$channelKey:guild-shard-index"
+	private val gShardIndex = twoWayIndex(gShardIndexKey, factory)
 
 	private val evalOps = factory.createRedisOperations<String, ChannelData>()
 	private val genericWriter = RedisElementWriter.from(factory.genericSerializer<Any>())
 	private val longReader = RedisElementReader.from(factory.serializer(Long::class.java))
+	private val voidReader = RedisElementReader.from(factory.serializer(Void::class.java))
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
 	}
 
+	@Language("Lua")
+	private val saveScript = RedisScript.of<Void>(
+		"""
+			local channelKey = KEYS[1]
+			local shardIndexKey = KEYS[2]
+			local guildShardIndexKey = KEYS[3]
+
+			local shardId = ARGV[1]
+			local channelIds = cjson.decode(ARGV[2])
+			local channels = cjson.decode(ARGV[3])
+			local guildIds = cjson.decode(ARGV[4])
+			local channelIdsByGuildId = cjson.decode(ARGV[5])
+			local guildIndexKeyPrefix = ARGV[6]:gsub('"', '') --unfuck quotation marks
+
+			-- addToShardIndex
+			local addToShardIndex = {}
+			for _, channelId in ipairs(channelIds) do
+				table.insert(addToShardIndex, shardId)
+				table.insert(addToShardIndex, channelId)
+			end
+			redis.call('ZADD', shardIndexKey, unpack(addToShardIndex))
+
+			-- addToGuildIndex
+			for i, guildId in ipairs(guildIds) do
+				local channelIdsInGuild = channelIdsByGuildId[i]
+				local guildIndexKey = guildIndexKeyPrefix .. ':' .. guildId
+				redis.call('SADD', guildIndexKey, unpack(channelIdsInGuild))
+			end
+
+			-- addToGuildShardIndex
+			local addToGuildShardIndex = {}
+			for _, guildId in ipairs(guildIds) do
+				table.insert(addToGuildShardIndex, shardId)
+				table.insert(addToGuildShardIndex, guildId)
+			end
+			if next(addToGuildShardIndex) ~= nil then
+				redis.call('ZADD', guildShardIndexKey, unpack(addToGuildShardIndex))
+			end
+
+			-- saveChannels
+			local saveChannels = {}
+			for i, channelId in ipairs(channelIds) do
+				local channel = channels[i]
+				table.insert(saveChannels, channelId)
+				table.insert(saveChannels, cjson.encode(channel))
+			end
+
+			redis.call('HSET', channelKey, unpack(saveChannels))
+			return redis.status_reply('OK')
+		""".trimIndent()
+	)
+
 	override fun saveAll(channels: List<ChannelData>, shardId: Int): Mono<Void> {
 		if (channels.isEmpty()) {
 			return Mono.empty()
 		}
-		// TODO consider LUA script for atomicity
-		return Mono.defer {
-			val addToShardIndex = shardIndex.addElements(shardId, channels.map { it.id().asLong() })
 
-			val addToGuildIndex = Flux.fromIterable(
-				channels
-					.filter { it.guildId().isPresent() }
-					.groupBy { it.guildId().get().asLong() }
-					.map { guildIndex.addElements(it.key, *it.value.map { ch -> ch.id().asLong() }.toTypedArray()) }
-			).flatMap { it }
+		// longs need to be strings to avoid lua double number fuckery
+		val channelIds = channels.map { it.id().asString() }
+		val channelIdsByGuildIds = channels
+			.filter { it.guildId().isPresent() }
+			.groupBy { it.guildId().get().asString() }
+			.mapValues { entry -> entry.value.map { it.id().asString() } }
 
-			val guildIds = channels.filter { it.guildId().isPresent() }.map { it.guildId().get().asLong() }
-			val addToGuildShardIndex = gShardIndex.addElements(shardId, guildIds)
-
-			val saveChannels = channelOps.putAll(channels.associateBy { it.id().asLong() })
-
-
-			Mono.`when`(addToShardIndex, addToGuildIndex, addToGuildShardIndex, saveChannels)
+		val guildIds = ArrayList<String>()
+		val nestedChannelIds = ArrayList<List<String>>()
+		for (entry in channelIdsByGuildIds) {
+			guildIds.add(entry.key)
+			nestedChannelIds.add(entry.value)
 		}
+
+		return evalOps.execute(
+			saveScript,
+			listOf(channelKey, shardIndexKey, gShardIndexKey),
+			listOf(shardId, channelIds, channels, guildIds, nestedChannelIds, guildIndexKey),
+			genericWriter,
+			voidReader,
+		).toMono()
 	}
 
 	@Language("Lua")
