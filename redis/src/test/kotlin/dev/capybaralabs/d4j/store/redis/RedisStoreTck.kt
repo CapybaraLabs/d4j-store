@@ -18,7 +18,7 @@ import reactor.tools.agent.ReactorDebugAgent
 
 
 private const val redisPort = 6379
-private val redisContainer = KGenericContainer("redis:6-alpine")
+private val redisContainer = GenericContainer("redis:6-alpine")
 	.withLogConsumer(Slf4jLogConsumer(LoggerFactory.getLogger("Container.Redis")))
 	.withExposedPorts(redisPort)
 
@@ -49,9 +49,6 @@ class RedisStoreTck : StoreTck, StoreLayoutResolver(), StoreLayoutProvider {
 	}
 }
 
-
-//https://github.com/testcontainers/testcontainers-java/issues/318
-class KGenericContainer(imageName: String) : GenericContainer<KGenericContainer>(imageName)
 class RedisContainerExtension : AfterAllCallback {
 
 	override fun afterAll(context: ExtensionContext?) {
