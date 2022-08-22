@@ -9,6 +9,7 @@ import discord4j.discordjson.json.gateway.MessageReactionRemove
 import discord4j.discordjson.json.gateway.MessageReactionRemoveAll
 import discord4j.discordjson.json.gateway.MessageReactionRemoveEmoji
 import discord4j.discordjson.json.gateway.Ready
+import java.util.function.Consumer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -48,6 +49,7 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 			.v(42)
 			.sessionId("Season 1")
 			.application(PartialApplicationInfoData.builder().id(selfId.toString()).build())
+			.resumeGatewayUrl("https://example.org")
 			.build()
 		updater.onReady(ready).block()
 
@@ -70,11 +72,11 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiId).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -89,11 +91,11 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, unicodeEmoji("👌").build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().name().get() == "👌" && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -110,11 +112,11 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiId).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 2 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -133,12 +135,12 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiIdB).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(2)
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdA && it.count() == 2 && !it.me() }
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdB && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -154,11 +156,11 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiId).build(), selfId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 2 && it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -187,20 +189,20 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		createMessageWithReaction(channelId, messageId, generateUniqueSnowflakeId(), emojiId)
 		addReaction(channelId, messageId, emoji(emojiId).build(), userId)
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 2 && !it.me() }
-			}
+			})
 
 		removeReaction(channelId, messageId, emoji(emojiId).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -216,21 +218,21 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiIdB).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(2)
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdA && it.count() == 1 && !it.me() }
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdB && it.count() == 1 && !it.me() }
-			}
+			})
 
 		removeReaction(channelId, messageId, emoji(emojiIdA).build(), userId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdB && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -246,20 +248,20 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, unicodeEmoji("👌").build(), userIdB)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().name().get() == "👌" && it.count() == 2 && !it.me() }
-			}
+			})
 
 		removeReaction(channelId, messageId, unicodeEmoji("👌").build(), userIdA)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().name().get() == "👌" && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -273,11 +275,11 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		createMessageWithReaction(channelId, messageId, generateUniqueSnowflakeId(), emojiId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 1 && !it.me() }
-			}
+			})
 
 		removeReaction(channelId, messageId, emoji(emojiId).build(), userId)
 
@@ -296,20 +298,20 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		addReaction(channelId, messageId, emoji(emojiId).build(), selfId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 2 && it.me() }
-			}
+			})
 
 		removeReaction(channelId, messageId, emoji(emojiId).build(), selfId)
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.anyMatch { it.emoji().id().get().asLong() == emojiId && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -408,12 +410,12 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		removeReactionEmoji(channelId, messageId, emoji(emojiIdA).build())
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.noneMatch { it.emoji().id().get().asLong() == emojiIdA }
 					.anyMatch { it.emoji().id().get().asLong() == emojiIdB && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -430,12 +432,12 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		removeReactionEmoji(channelId, messageId, unicodeEmoji("👌").build())
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.noneMatch { it.emoji().name().get() == "👌" }
 					.anyMatch { it.emoji().name().get() == "👍" && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -480,12 +482,12 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 		removeReactionEmoji(channelId, messageId, unicodeEmoji("👍").build())
 
 		assertThat(accessor.getMessageById(channelId, messageId).block())
-			.satisfies { message ->
+			.satisfies(Consumer { message ->
 				assertThat(message.reactions().get())
 					.hasSize(1)
 					.noneMatch { it.emoji().name().get() == "👍" }
 					.anyMatch { it.emoji().name().get() == "👌" && it.count() == 1 && !it.me() }
-			}
+			})
 	}
 
 	@Test
@@ -538,6 +540,7 @@ internal class ReactionTest(storeLayoutProvider: StoreLayoutProvider) {
 			.v(42)
 			.sessionId(selfId.toString())
 			.application(PartialApplicationInfoData.builder().id(selfId.toString()).build())
+			.resumeGatewayUrl("https://example.org")
 			.build()
 		updater.onReady(ready).block()
 	}
