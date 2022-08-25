@@ -5,10 +5,6 @@ import dev.capybaralabs.d4j.store.common.isPresent
 import dev.capybaralabs.d4j.store.common.repository.ChannelRepository
 import dev.capybaralabs.d4j.store.redis.RedisFactory
 import discord4j.discordjson.json.ChannelData
-import org.intellij.lang.annotations.Language
-import org.springframework.data.redis.core.script.RedisScript
-import org.springframework.data.redis.serializer.RedisElementReader
-import org.springframework.data.redis.serializer.RedisElementWriter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -17,15 +13,9 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 	private val channelKey = key("channel")
 	private val channelOps = RedisHashOps(channelKey, factory, Long::class.java, ChannelData::class.java)
 
-	private val shardIndexKey = "$channelKey:shard-index"
-	private val shardIndex = twoWayIndex(shardIndexKey, factory)
-
+	private val shardIndex = twoWayIndex("$channelKey:shard-index", factory)
 	private val guildIndex = oneWayIndex("$channelKey:guild-index", factory)
 	private val gShardIndex = twoWayIndex("$channelKey:guild-shard-index", factory)
-
-	private val evalOps = factory.createRedisOperations<String, ChannelData>()
-	private val genericWriter = RedisElementWriter.from(factory.genericSerializer<Any>())
-	private val longReader = RedisElementReader.from(factory.serializer(Long::class.java))
 
 	override fun save(channel: ChannelData, shardId: Int): Mono<Void> {
 		return saveAll(listOf(channel), shardId)
@@ -56,34 +46,16 @@ internal class RedisChannelRepository(prefix: String, factory: RedisFactory) : R
 		}
 	}
 
-	@Language("Lua")
-	private val deleteScript = RedisScript.of(
-		"""
-			local channelKey = KEYS[1]
-			local shardIndexKey = KEYS[2]
-			local guildIndexKey = KEYS[3] --nullable
-			local channelId = ARGV[1]
-			-- shardIndex
-			redis.call('ZREM', shardIndexKey, channelId)
-
-			-- guildIndex
-			if guildIndexKey then
-				redis.call('SREM', guildIndexKey, channelId)
-			end
-
-			-- channel
-			return redis.call('HDEL', channelKey, channelId)
-		""".trimIndent(), Long::class.java
-	)
 
 	override fun delete(channelId: Long, guildId: Long?): Mono<Long> {
-		return evalOps.execute(
-			deleteScript,
-			listOfNotNull(channelKey, shardIndexKey, guildId?.let { guildIndex.key(it) }),
-			listOf(channelId),
-			genericWriter,
-			longReader,
-		).last()
+		return Mono.defer {
+			val removeChannel = channelOps.remove(channelId)
+			val removeFromShardIndex = shardIndex.removeElements(channelId)
+			val removeFromGuildIndex = if (guildId != null) guildIndex.removeElements(guildId, channelId) else Mono.empty()
+
+			Mono.`when`(removeFromShardIndex, removeFromGuildIndex)
+				.then(removeChannel)
+		}
 	}
 
 	override fun deleteByGuildId(guildId: Long): Mono<Long> {
