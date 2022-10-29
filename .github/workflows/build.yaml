@@ -9,15 +9,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
         with:
           fetch-depth: 0
 
       - name: Gradle Wrapper Verification
-        uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b # v1.0.4
+        uses: gradle/wrapper-validation-action@55e685c48d84285a5b0418cd094606e199cca3b6 # v1.0.5
 
       - name: Setup JDK
-        uses: actions/setup-java@2c7a4878f5d120bd643426d54ae1209b29cc01a3 # v3.4.1
+        uses: actions/setup-java@de1bb2b0c5634f0fc4438d7aa9944e68f9bf86cc # v3.6.0
         with:
           distribution: temurin
           java-version: 11
@@ -40,7 +40,7 @@ jobs:
           arguments: check sonarqube --no-build-cache --info -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=capybaralabs -Dsonar.login=${{ env.SONAR_TOKEN }}
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@2a60c5d47eb29cd5cc922f51bbea18e148f56203 # v2.0.0
+        uses: EnricoMi/publish-unit-test-result-action@46ab8d49369d898e381a607119161771bc65c2a6 # v2.2.0
         if: always()
         with:
           junit_files: ./**/build/test-results/**/*.xml
