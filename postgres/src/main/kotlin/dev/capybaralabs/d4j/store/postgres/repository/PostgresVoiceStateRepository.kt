@@ -59,13 +59,12 @@ internal class PostgresVoiceStateRepository(private val factory: ConnectionFacto
 				)
 
 				for (voiceState in voiceStatesInChannels) {
-					statement
+					statement.add()
 						.bind("$1", voiceState.userId().asLong())
 						.bind("$2", voiceState.channelId().orElseThrow().asLong())
 						.bind("$3", voiceState.guildId().get().asLong())
 						.bind("$4", serde.serialize(voiceState))
 						.bind("$5", shardId)
-						.add()
 				}
 
 				statement.executeConsumingAll().then()

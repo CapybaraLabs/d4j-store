@@ -54,10 +54,9 @@ internal class PostgresUserRepository(private val factory: ConnectionFactory, pr
 					""".trimIndent()
 				)
 				for (user in users) {
-					statement
+					statement.add()
 						.bind("$1", user.id().asLong())
 						.bind("$2", serde.serialize(user))
-						.add()
 				}
 				statement.executeConsumingAll().then()
 			}

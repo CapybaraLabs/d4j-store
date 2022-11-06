@@ -54,10 +54,10 @@ internal class PostgresGuildRepository(private val factory: ConnectionFactory, p
 				)
 
 				for (guild in guilds) {
-					statement.bind("$1", guild.id().asLong())
+					statement.add()
+						.bind("$1", guild.id().asLong())
 						.bind("$2", serde.serialize(guild))
 						.bind("$3", shardId)
-						.add()
 				}
 				statement.executeConsumingAll().then()
 			}

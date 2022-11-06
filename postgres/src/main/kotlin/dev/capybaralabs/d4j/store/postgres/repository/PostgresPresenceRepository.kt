@@ -57,12 +57,11 @@ internal class PostgresPresenceRepository(private val factory: ConnectionFactory
 				for (guildPresences in filtered) {
 					val guildId = guildPresences.key
 					for (presence in guildPresences.value) {
-						statement
+						statement.add()
 							.bind("$1", presence.user().id().asLong())
 							.bind("$2", guildId)
 							.bind("$3", serde.serialize(presence))
 							.bind("$4", shardId)
-							.add()
 					}
 				}
 				statement.executeConsumingAll().then()

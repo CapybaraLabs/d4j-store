@@ -58,12 +58,11 @@ internal class PostgresRoleRepository(private val factory: ConnectionFactory, pr
 				for (guildRoles in filtered) {
 					val guildId = guildRoles.key
 					for (role in guildRoles.value) {
-						statement
+						statement.add()
 							.bind("$1", role.id().asLong())
 							.bind("$2", guildId)
 							.bind("$3", serde.serialize(role))
 							.bind("$4", shardId)
-							.add()
 					}
 				}
 				statement.executeConsumingAll().then()

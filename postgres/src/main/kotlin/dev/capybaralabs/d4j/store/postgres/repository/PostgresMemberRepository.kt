@@ -60,12 +60,11 @@ internal class PostgresMemberRepository(private val factory: ConnectionFactory, 
 				for (guildMembers in filtered.entries) {
 					val guildId = guildMembers.key
 					for (member in guildMembers.value) {
-						statement
+						statement.add()
 							.bind("$1", member.user().id().asLong())
 							.bind("$2", guildId)
 							.bind("$3", serde.serialize(member))
 							.bind("$4", shardId)
-							.add()
 					}
 				}
 

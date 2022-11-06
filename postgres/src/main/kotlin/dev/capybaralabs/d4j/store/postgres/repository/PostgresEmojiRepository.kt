@@ -61,12 +61,11 @@ internal class PostgresEmojiRepository(private val factory: ConnectionFactory, p
 				for (guildEmojis in filtered) {
 					val guildId = guildEmojis.first
 					for (emoji in guildEmojis.second) {
-						statement
+						statement.add()
 							.bind("$1", emoji.id().orElseThrow().asLong())
 							.bind("$2", guildId)
 							.bind("$3", serde.serialize(emoji))
 							.bind("$4", shardId)
-							.add()
 					}
 				}
 				statement.executeConsumingAll().then()

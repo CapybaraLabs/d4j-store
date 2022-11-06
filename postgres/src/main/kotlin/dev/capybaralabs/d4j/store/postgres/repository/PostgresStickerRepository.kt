@@ -54,12 +54,11 @@ internal class PostgresStickerRepository(private val factory: ConnectionFactory,
 				)
 
 				for (sticker in filtered) {
-					statement
+					statement.add()
 						.bind("$1", sticker.id().asLong())
 						.bind("$2", sticker.guildId().get().asLong())
 						.bind("$3", serde.serialize(sticker))
 						.bind("$4", shardId)
-						.add()
 				}
 				statement.executeConsumingAll().then()
 			}

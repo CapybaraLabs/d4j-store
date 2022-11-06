@@ -1,5 +1,5 @@
 dependencies {
-	api "io.r2dbc:r2dbc-postgresql"
+	api "org.postgresql:r2dbc-postgresql"
 	api "io.r2dbc:r2dbc-pool"
 	api project(":common")
 

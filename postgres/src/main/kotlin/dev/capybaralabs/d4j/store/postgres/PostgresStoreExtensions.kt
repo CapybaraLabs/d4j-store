@@ -80,11 +80,11 @@ internal fun Publisher<out Result>.mapToCount(): Mono<Long> {
 }
 
 // consuming the results is necessary for all queries because of https://github.com/pgjdbc/r2dbc-postgresql/issues/194#issuecomment-557443260
-internal fun Flux<out Result>.consume(): Flux<Int> = flatMap { it.rowsUpdated }
+internal fun Flux<out Result>.consume(): Flux<Long> = flatMap { it.rowsUpdated }
 
 // these are a bunch of convenience methods to achieve that
-internal fun Statement.executeConsumingAll(): Flux<Int> = execute().toFlux().consume()
-internal fun Statement.executeConsumingSingle(): Mono<Int> = executeConsumingAll().toMono()
+internal fun Statement.executeConsumingAll(): Flux<Long> = execute().toFlux().consume()
+internal fun Statement.executeConsumingSingle(): Mono<Long> = executeConsumingAll().toMono()
 
 
 /**

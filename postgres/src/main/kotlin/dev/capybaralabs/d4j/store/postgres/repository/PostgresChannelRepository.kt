@@ -59,7 +59,7 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 				for (channel in channels) {
 					val guildId = channel.guildId().toOptional()
 
-					statement.bind("$1", channel.id().asLong())
+					statement.add().bind("$1", channel.id().asLong())
 					statement = if (guildId.isPresent) {
 						statement.bind("$2", guildId.get().asLong())
 					} else {
@@ -68,8 +68,6 @@ internal class PostgresChannelRepository(private val factory: ConnectionFactory,
 					statement
 						.bind("$3", serde.serialize(channel))
 						.bind("$4", shardId)
-
-					statement.add()
 				}
 
 				statement.executeConsumingAll().then()
