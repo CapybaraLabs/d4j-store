@@ -6,14 +6,14 @@ javaPlatform {
 	allowDependencies()
 }
 dependencies {
-	api platform("org.jetbrains.kotlin:kotlin-bom:1.7.20")
-	api platform("org.springframework.boot:spring-boot-dependencies:3.0.0-RC1")
-	api platform("org.testcontainers:testcontainers-bom:1.17.5")
+	api platform("org.jetbrains.kotlin:kotlin-bom:1.7.21")
+	api platform("org.springframework.boot:spring-boot-dependencies:3.0.0")
+	api platform("org.testcontainers:testcontainers-bom:1.17.6")
 	api platform("org.junit:junit-bom:5.9.1")
 	constraints {
 		// see https://oss.sonatype.org/content/repositories/snapshots/com/discord4j/discord4j-core/
 		api "com.discord4j:discord4j-core:3.2.3"
-		api "org.postgresql:r2dbc-postgresql:1.0.0.RC1"
-		api "io.r2dbc:r2dbc-pool:1.0.0.RC1"
+		api "org.postgresql:r2dbc-postgresql:1.0.0.RELEASE"
+		api "io.r2dbc:r2dbc-pool:1.0.0.RELEASE"
 	}
 }
